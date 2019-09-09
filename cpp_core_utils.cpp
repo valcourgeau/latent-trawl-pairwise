@@ -10,7 +10,7 @@ const double EPSILON = std::numeric_limits<double>::epsilon();
 double CppCaseZeroZero(double alpha, double beta, double kappa, double B1, double B2, double B3) {
   double A(B1+B3);
   double b1(-alpha*B1/A), b2(-alpha*B2/A), b3(-alpha*B3/A);
-  double tmp(1.0 - 2.0*pow(1+kappa/beta, -alpha) + pow(1+kappa/beta, b1+b3)*pow(1+2*kappa/beta, b2));
+  double tmp(1.0 - 2.0*pow(1+kappa/beta, -alpha) + pow(1.0+kappa/beta, b1+b3)*pow(1.0+2.0*kappa/beta, b2));
 
   return tmp;
 }

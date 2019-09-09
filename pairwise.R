@@ -120,19 +120,20 @@ PairPDFConstructor <- function(params_noven, type='exp'){
   trawl_params <- params_noven[4:length(params_noven)]
   
   return(function(xs, h){
-    CaseSeparator(xs,
-                  alpha = alpha,
-                  beta = beta,
-                  kappa = kappa,
-                  B1 = B1_func(trawl_params, h),
-                  B2 = B2_func(trawl_params, h),
-                  B3 = B3_func(trawl_params, h)
-                  )
+    return(CppCaseSeparator(xs,
+                            alpha = alpha,
+                            beta = beta,
+                            kappa = kappa,
+                            B1 = B1_func(trawl_params, h),
+                            B2 = B2_func(trawl_params, h),
+                            B3 = B3_func(trawl_params, h)
+    ))
   })
 }
 
 library(compiler)
 library(parallel)
+Rcpp::sourceCpp('cpp_core_utils.cpp')
 
 PLConstructor <- function(depth, pair_likehood){
   # returns function implementing Consecutive PL with depth depth
@@ -142,34 +143,39 @@ PLConstructor <- function(depth, pair_likehood){
     this_pl <- cmpfun(pair_likehood)
     cores <- detectCores(logical = TRUE)
     
-    cl <- makeCluster(cores)
-    clusterExport(cl, c('CaseSeparator',
-                        'data',
-                        'CheckAllNonpositive',
-                        'CaseOneOne',
-                        'CaseOneZero',
-                        'CaseZeroZero',
-                        'CheckAllPositive',
-                        'StandTrawlTerms',
-                        'TrawlExpB1',
-                        'TrawlExpB2',
-                        'TrawlExpB3'))
-    
+    # cl <- makeCluster(cores)
+    # clusterExport(cl, c('CaseSeparator',
+    #                     'CppCaseSeparator',
+    #                     'data',
+    #                     'CheckAllNonpositive',
+    #                     'CaseOneOne',
+    #                     'CaseOneZero',
+    #                     'CaseZeroZero',
+    #                     'CppCaseOneOne',
+    #                     'CppCaseOneZero',
+    #                     'CppCaseZeroZero',
+    #                     'CheckAllPositive',
+    #                     'StandTrawlTerms',
+    #                     'TrawlExpB1',
+    #                     'TrawlExpB2',
+    #                     'TrawlExpB3'))
+    # 
     log_pl_per_depth <- vapply(1:depth, # loop through depths
                FUN = function(k){
                   xs_stack <- cbind(data[1:(n_sample-k)], data[(k+1):(n_sample)])
                   return(
                       sum(
-                        unlist(
-                          parApply(
-                            cl,
+                        # unlist(
+                          apply(
+                            # cl,
                             X = xs_stack, 
                             MARGIN = 1, 
                             FUN = function(xs){
-                                  tmp_pl_val <-log(this_pl(xs, h=k))
-                                   return(log(this_pl(xs, h = k)))
-                                   })
-                        )
+                              print(xs)
+                                  print(this_pl(xs, h=k))
+                                  return(log(this_pl(xs, h=k) + 1e-9))
+                                  })
+                        # )
                     ))
                 },
                FUN.VALUE = 1.0)
@@ -199,11 +205,11 @@ TrawlPLNoven <- function(params, depth, type='exp'){
   params_tmp <- params
   
   pair_likehood_f <- PairPDFConstructor(params_noven = params_tmp, type = type)
-  wrapper_with_jacobian <- function(data, h){
-    return(pair_likehood_f(data, h)*abs(params[1])^(-3))
-  }
-  
-  return(PLConstructor(depth = depth, pair_likehood = wrapper_with_jacobian))
+  # wrapper_with_jacobian <- function(data, h){
+  #   return(pair_likehood_f(data, h)*abs(params[1])^(-3))
+  # }
+  # 
+  return(PLConstructor(depth = depth, pair_likehood = pair_likehood_f))
 }
 
   
@@ -228,7 +234,9 @@ TrawlPL <- function(data, depth, type='exp', parametrisation='standard'){
   })
 }
 
-ok <- TrawlPLFunctional(params = c(1,10,1,1), depth = 4, parametrisation='noven')
+
+noven_example_params <- c(6.33,20.12,12.18, 0.27)
+ok <- TrawlPLFunctional(params = noven_example_params, depth = 4, parametrisation='noven')
 
 #set up as function of params
 set.seed(42)
@@ -236,23 +244,47 @@ rdm_data <- pmax(rnorm(1000), 0.0)
 ok(rdm_data)/length(rdm_data)
 
 library(profvis)
-profvis({
-  ok <- TrawlPLFunctional(params = c(1,10,1,1), depth = 4, parametrisation='noven')
+# profvis({
+#   ok <- TrawlPLFunctional(params = noven_example_params, depth = 4, parametrisation='noven')
+# 
+#   #set up as function of params
+#   set.seed(42)
+#   rdm_data <- pmax(rnorm(1000), 0.0)
+#   ok(rdm_data)/length(rdm_data)
+# })
+# profvis({
+#   test_params <- noven_example_params
+#   #set up as function of params
+#   set.seed(42)
+#   rdm_data <- pmax(rnorm(1000), 0.0)
+#   dac <- TrawlPL(data = rdm_data, depth = 4, parametrisation='noven')
+# 
+#   print(dac(test_params)/length(rdm_data))
+# })
+# 
+# profvis({
+#   test_params <- noven_example_params
+#   #set up as function of params
+#   set.seed(42)
+#   rdm_data <- pmax(rnorm(1000), 1.96) - 1.96
+#   dac <- TrawlPL(data = rdm_data, depth = 4, parametrisation='noven')
+#   
+#   optim(dac, par = test_params)
+# })
 
-  #set up as function of params
-  set.seed(42)
-  rdm_data <- pmax(rnorm(1000), 0.0)
-  ok(rdm_data)/length(rdm_data)
-})
-profvis({
-  test_params <- c(1,10,1,1)
-  #set up as function of params
-  set.seed(42)
-  rdm_data <- pmax(rnorm(100000), 0.0)
-  dac <- TrawlPL(data = rdm_data, depth = 4, parametrisation='noven')
+test_params <- noven_example_params
+#set up as function of params
+set.seed(42)
+rdm_data <- pmax(rnorm(10000), 1.96) - 1.96
+dac <- TrawlPL(data = rdm_data, depth = 4, parametrisation='standard')
+test_params <- noven_example_params
+test_params[1] <- 1/test_params[1]
+test_params[2] <- (noven_example_params[2] + noven_example_params[3])/noven_example_params[1]
+dac(test_params)
 
-  print(dac(test_params)/length(rdm_data))
-})
+optim(dac, par = test_params, method = 'L-BFGS-B', lower=c(1, 1, 3, 1e-1), control = list(trace=3))
+
+
 
 
 

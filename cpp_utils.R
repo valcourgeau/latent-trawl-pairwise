@@ -54,9 +54,9 @@ cppFunction('
   return tmp;
 }')
 
-CppCaseOneZero(c(1.0, 2.0), 0.1,0.1,0.1,0.1,0.3,0.1)
-benchmark(CppCaseOneZero(c(1.0, 2.0), 0.1,0.1,0.1,0.1,0.3,0.1), replications = N)
-benchmark(CaseOneZero(c(1.0, 2.0), 0.1,0.1,0.1,0.1,0.3,0.1), replications = N)
+CppCaseOneZero(c(2.0, 0.0), 0.1,0.1,0.1,0.1,0.3,0.1)
+benchmark(CppCaseOneZero(c(2.0, 0.0), 0.1,0.1,0.1,0.1,0.3,0.1), replications = N)
+benchmark(CaseOneZero(c(2.0, 0.0), 0.1,0.1,0.1,0.1,0.3,0.1), replications = N)
 
 cppFunction('
   #include <cmath>
