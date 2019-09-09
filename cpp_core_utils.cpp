@@ -43,3 +43,18 @@ double CppCaseOneOne(NumericVector xs, double alpha, double beta, double kappa, 
   
   return tmp_1 * (tmp_2 + tmp_3);
 }
+
+// [[Rcpp::export]]
+double CppCaseSeparator(NumericVector xs, double alpha, double beta, double kappa, double B1, double B2, double B3) {    
+  assert(std::size(xs) == 2);
+  double product = std::accumulate(xs.begin(), xs.end(), 1, std::multiplies<double>());
+  bool all_nonpositive = std::all_of(xs.begin(), xs.end(), [](double x){ return x <= 0.0; });
+  
+  if(all_nonpositive){
+    return CppCaseZeroZero(alpha, beta, kappa, B1, B2, B3);
+  }else if(std::abs(product) < EPSILON){
+    return CppCaseOneZero(xs, alpha, beta, kappa, B1, B2, B3);
+  }else{
+    return CppCaseOneOne(xs, alpha, beta, kappa, B1, B2, B3);
+  }
+}

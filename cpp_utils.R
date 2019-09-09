@@ -75,9 +75,47 @@ cppFunction('
   
   return tmp_1 * (tmp_2 + tmp_3);
 }')
+CaseSeparator <-  function(xs, alpha, beta, kappa, B1, B2, B3){
+  stopifnot(length(xs) == 2)
+  stopifnot(CheckAllNonpositive(-xs))
+  # 
+  # tmp <- (xs[1] == 0.0)*(xs[2] == 0.0)*CaseZeroZero(alpha, beta, kappa, B1, B2, B3)
+  # tmp <- tmp + ((xs[1] != 0.0)*(xs[2] == 0.0) | (xs[1] == 0.0)*(xs[2] != 0.0))*CaseOneZero(xs, alpha, beta, kappa, B1, B2, B3)
+  # tmp <- tmp + CheckAllPositive(xs)*CaseOneOne(xs, alpha, beta, kappa, B1, B2, B3)
+  #   
+  # return(tmp)
+  if(CheckAllNonpositive(xs)){
+    return(CaseZeroZero(alpha, beta, kappa, B1, B2, B3))
+  }else{
+    if(prod(xs) == 0.0){
+      return(CaseOneZero(xs, alpha, beta, kappa, B1, B2, B3))
+    }else{
+      return(CaseOneOne(xs, alpha, beta, kappa, B1, B2, B3))
+    }
+  }
+}
+cppFunction('
+double CppCaseSeparator(NumericVector xs, double alpha, double beta, double kappa, double B1, double B2, double B3) {    
+  assert(size(xs) == 2);
+  double product = std::accumulate(xs.begin(), xs.end(), 1, std::multiplies<double>());
+  bool all_nonpositive = std::all_of(xs.begin(), xs.end(), [](double x){ return x <= 0.0; });
+
+  if(all_nonpositive){
+    return CppCaseZeroZero(xs, alpha, beta, kappa, B1, B2, B3);
+  }else if(std::abs(product) < EPSILON){
+    return CppCaseOneZero(xs, alpha, beta, kappa, B1, B2, B3);
+  }else{
+    return CppCaseOneOne(xs, alpha, beta, kappa, B1, B2, B3);
+  }
+}
+')
+
 
 benchmark(CppCaseOneOne(c(1.0, 2.0), 0.1,0.1,0.1,0.1,0.3,0.1), replications = N)
 benchmark(CaseOneOne(c(1.0, 2.0), 0.1,0.1,0.1,0.1,0.3,0.1), replications = N)
 
-importFrom(Rcpp, sourceCpp)
+Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
 Rcpp::sourceCpp('cpp_core_utils.cpp')
+
+benchmark(CppCaseSeparator(c(1.0, 2.0), 0.1,0.1,0.1,0.1,0.3,0.1), replications = N)
+benchmark(CaseSeparator(c(1.0, 2.0), 0.1,0.1,0.1,0.1,0.3,0.1), replications = N)
