@@ -78,3 +78,6 @@ cppFunction('
 
 benchmark(CppCaseOneOne(c(1.0, 2.0), 0.1,0.1,0.1,0.1,0.3,0.1), replications = N)
 benchmark(CaseOneOne(c(1.0, 2.0), 0.1,0.1,0.1,0.1,0.3,0.1), replications = N)
+
+importFrom(Rcpp, sourceCpp)
+Rcpp::sourceCpp('cpp_core_utils.cpp')
