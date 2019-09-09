@@ -9,8 +9,6 @@ CheckAllPositive <- function(elems){
 }
 
 StandTrawlTerms <- function(alpha, elems){
-  stopifnot(CheckAllPositive(elems))
-  stopifnot(length(elems) >= 2)
   A <- sum(elems[1:2])
   return(-alpha*elems/A)
 }
@@ -23,7 +21,6 @@ CaseZeroZero <- function(alpha, beta, kappa, B1, B2, B3){
   b2 <- b_values[2]
   b3 <- b_values[3]
   
-  
   stopifnot(CheckAllNonpositive(c(b1, b2, b3)))
   
   tmp <- 1 - 2* (1+kappa/beta)^(-alpha) + (1+kappa/beta)^(b1+b3)*(1+2*kappa/beta)^(b2)
@@ -33,7 +30,6 @@ CaseZeroZero <- function(alpha, beta, kappa, B1, B2, B3){
 
 CaseOneZero <- function(xs, alpha, beta, kappa, B1, B2, B3){
   stopifnot(CheckAllPositive(c(beta, kappa)))
-  stopifnot(length(xs)==2)
   
   xs <- (xs[1] == 0.0) * xs[2:1] + (xs[1] != 0.0) * xs
   
@@ -51,8 +47,6 @@ CaseOneZero <- function(xs, alpha, beta, kappa, B1, B2, B3){
 }
 
 CaseOneOne <- function(xs, alpha, beta, kappa, B1, B2, B3){
-  # stopifnot(CheckAllPositive(xs))
-  stopifnot(length(xs) == 2)
   stopifnot(CheckAllPositive(c(beta, kappa)))
   # c(b1, b2, b3) %<-%(StandTrawlTerms(alpha, c(B1, B2, B3)))
   b_values <- StandTrawlTerms(alpha, c(B1, B2, B3))
@@ -138,7 +132,7 @@ PairPDFConstructor <- function(params_noven, type='exp'){
 }
 
 library(compiler)
-
+library(parallel)
 
 PLConstructor <- function(depth, pair_likehood){
   # returns function implementing Consecutive PL with depth depth
@@ -146,16 +140,36 @@ PLConstructor <- function(depth, pair_likehood){
   pl_f <- function(data){
     n_sample <- length(data)
     this_pl <- cmpfun(pair_likehood)
+    cores <- detectCores(logical = TRUE)
+    
+    cl <- makeCluster(cores)
+    clusterExport(cl, c('CaseSeparator',
+                        'data',
+                        'CheckAllNonpositive',
+                        'CaseOneOne',
+                        'CaseOneZero',
+                        'CaseZeroZero',
+                        'CheckAllPositive',
+                        'StandTrawlTerms',
+                        'TrawlExpB1',
+                        'TrawlExpB2',
+                        'TrawlExpB3'))
+    
     log_pl_per_depth <- vapply(1:depth, # loop through depths
                FUN = function(k){
                   xs_stack <- cbind(data[1:(n_sample-k)], data[(k+1):(n_sample)])
                   return(
-                      sum(apply(X = xs_stack, 
+                      sum(
+                        unlist(
+                          parApply(
+                            cl,
+                            X = xs_stack, 
                             MARGIN = 1, 
                             FUN = function(xs){
                                   tmp_pl_val <-log(this_pl(xs, h=k))
                                    return(log(this_pl(xs, h = k)))
                                    })
+                        )
                     ))
                 },
                FUN.VALUE = 1.0)
@@ -204,14 +218,22 @@ TrawlPLFunctional <- function(params, depth, type='exp', parametrisation='standa
     return(-1*PLOperator(data))})
 }
 
+TrawlPL <- function(data, depth, type='exp', parametrisation='standard'){
+  return(function(params){
+    pl_functional <- TrawlPLFunctional(params = params,
+                        depth = depth,
+                        type=type,
+                        parametrisation=parametrisation)
+    return(pl_functional(data))
+  })
+}
+
 ok <- TrawlPLFunctional(params = c(1,10,1,1), depth = 4, parametrisation='noven')
 
 #set up as function of params
 set.seed(42)
 rdm_data <- pmax(rnorm(1000), 0.0)
 ok(rdm_data)/length(rdm_data)
-
-ok
 
 library(profvis)
 profvis({
@@ -222,5 +244,16 @@ profvis({
   rdm_data <- pmax(rnorm(1000), 0.0)
   ok(rdm_data)/length(rdm_data)
 })
+profvis({
+  test_params <- c(1,10,1,1)
+  #set up as function of params
+  set.seed(42)
+  rdm_data <- pmax(rnorm(100000), 0.0)
+  dac <- TrawlPL(data = rdm_data, depth = 4, parametrisation='noven')
+
+  print(dac(test_params)/length(rdm_data))
+})
+
+
 
 
