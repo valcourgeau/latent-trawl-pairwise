@@ -2,7 +2,7 @@ data_path <- "C:/Users/Valentin/Documents/GitHub/multi-trawl-extremes/data/hourl
 pdbl <- read.csv(data_path)
 
 # Reducing sample size
-pdbl <- pdbl[1:100000,]
+pdbl <- pdbl
 
 library(evir)
 library(forecast)
@@ -28,18 +28,18 @@ std_clean_data <- apply(jittered_clean_data, MARGIN = 2, FUN = function(x){x/sd(
 
 # taking exceedances with 95% quantile
 final_clean_data <- apply(std_clean_data, MARGIN = 2, FUN = function(x){return(pmax(x-quantile(x, 0.95), 0.0))})
-gpd_fit_p_values <- apply(final_clean_data, MARGIN = 2, FUN = function(x){gPdtest::gpd.test(x[x>0], J = 2000)$p.values[1:2]})
+gpd_fit_p_values <- apply(final_clean_data[1:10000,], MARGIN = 2, FUN = function(x){gPdtest::gpd.test(x[x>0], J = 2000)$p.values[1:2]})
 # add exponential case
-gpd_fit_p_values_95 <- rbind(gpd_fit_p_values, apply(final_clean_data, MARGIN = 2, FUN = function(x){Renext::gofExp.test(x[x > 0])$p.value}))
-row.names(gpd_fit_p_values) <- c('xi < 0', 'xi > 0', 'xi = 0')
+gpd_fit_p_values_95 <- rbind(gpd_fit_p_values, apply(final_clean_data[1:10000,], MARGIN = 2, FUN = function(x){Renext::gofExp.test(x[x > 0])$p.value}))
+row.names(gpd_fit_p_values_95) <- c('xi < 0', 'xi > 0', 'xi = 0')
 print(gpd_fit_p_values_95)
 # CCL: all good except N0
 
 # taking exceedances with 98% quantile
 final_clean_data <- apply(std_clean_data, MARGIN = 2, FUN = function(x){return(pmax(x-quantile(x, 0.98), 0.0))})
-gpd_fit_p_values <- apply(final_clean_data, MARGIN = 2, FUN = function(x){gPdtest::gpd.test(x[x>0], J = 2000)$p.values[1:2]})
+gpd_fit_p_values <- apply(final_clean_data[1:10000,], MARGIN = 2, FUN = function(x){gPdtest::gpd.test(x[x>0], J = 2000)$p.values[1:2]})
 # add exponential case
-gpd_fit_p_values_98 <- rbind(gpd_fit_p_values, apply(final_clean_data, MARGIN = 2, FUN = function(x){Renext::gofExp.test(x[x > 0])$p.value}))
+gpd_fit_p_values_98 <- rbind(gpd_fit_p_values, apply(final_clean_data[1:10000,], MARGIN = 2, FUN = function(x){Renext::gofExp.test(x[x > 0])$p.value}))
 row.names(gpd_fit_p_values_98) <- c('xi < 0', 'xi > 0', 'xi = 0')
 print(gpd_fit_p_values_98)
 # CCL: NO is xi > 0
@@ -64,3 +64,5 @@ if(PLOT.IT){
 clean_data_to_save <- apply(std_clean_data, MARGIN = 2, FUN = function(x){return(pmax(x-quantile(x, 0.95), 0.0))})
 clean_data_to_save[,3] <- pmax(clean_data_to_save[,3]-quantile(clean_data_to_save[,3], 0.98), 0.0)
 write.csv(clean_data_to_save, file = 'data/clean_pollution_data.csv')
+write.csv(gpd_fit_p_values_95, file = 'data/gpd_fit_p_values_95.csv')
+write.csv(gpd_fit_p_values_98, file = 'data/gpd_fit_p_values_98.csv')

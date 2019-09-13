@@ -1,4 +1,9 @@
 library('zeallot')
+Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
+library(compiler)
+library(parallel)
+library(assertthat)
+Rcpp::sourceCpp('cpp_core_utils.cpp')
 
 CheckAllNonpositive <- function(elems){
   all(elems <= 0.0)
@@ -89,14 +94,16 @@ CaseSeparator <-  function(xs, alpha, beta, kappa, B1, B2, B3){
 
 TrawlExpB1 <- function(param, h){
   stopifnot(length(param) == 1)
-  stopifnot(CheckAllPositive(c(param, h)))
+  # cat('param B1', param, 'h', h, '\n')
+  assertthat::assert_that(CheckAllPositive(c(param, h)), msg = cat('params', param, '/ h', h,'\n'))
   
   return(exp(-param*h)/param)
 }
 
 TrawlExpB2 <- function(param, h){
   stopifnot(length(param) == 1)
-  stopifnot(CheckAllPositive(c(param, h)))
+  # cat('param B2', param, 'h', h, '\n')
+  assertthat::assert_that(CheckAllPositive(c(param, h)), msg = cat('params', param, '/ h', h,'\n'))
   
   return((1.0- exp(-param*h))/param)
 }
@@ -118,7 +125,7 @@ PairPDFConstructor <- function(params_noven, type='exp'){
   beta <- params_noven[2]
   kappa <- params_noven[3]
   trawl_params <- params_noven[4:length(params_noven)]
-  
+  assertthat::assert_that(CheckAllPositive(trawl_params))
   return(function(xs, h){
     return(CppCaseSeparator(xs,
                             alpha = alpha,
@@ -131,17 +138,16 @@ PairPDFConstructor <- function(params_noven, type='exp'){
   })
 }
 
-library(compiler)
-library(parallel)
-Rcpp::sourceCpp('cpp_core_utils.cpp')
+
 
 PLConstructor <- function(depth, pair_likehood){
   # returns function implementing Consecutive PL with depth depth
-  stopifnot(depth > 1)
+  stopifnot(depth >= 1)
   pl_f <- function(data){
     n_sample <- length(data)
-    this_pl <- cmpfun(pair_likehood)
-    cores <- detectCores(logical = TRUE)
+    # this_pl <- cmpfun(pair_likehood)
+    this_pl <- pair_likehood
+    # cores <- detectCores(logical = TRUE)
     
     # cl <- makeCluster(cores)
     # clusterExport(cl, c('CaseSeparator',
@@ -171,10 +177,14 @@ PLConstructor <- function(depth, pair_likehood){
                             X = xs_stack, 
                             MARGIN = 1, 
                             FUN = function(xs){
-                              print(xs)
-                                  print(this_pl(xs, h=k))
-                                  return(log(this_pl(xs, h=k) + 1e-9))
-                                  })
+                              pl_val <- this_pl(xs, h=k)
+                              # print(pl_val)
+                              if(pl_val < 0.0){
+                                # warning(paste('negative PL', this_pl(xs, h=k), '\n'))
+                                return(pl_val)
+                              }else{
+                                return(log(max(pl_val, 1e-9)))
+                              }})
                         # )
                     ))
                 },
@@ -191,10 +201,18 @@ TrawlPLStandard <- function(params, depth, type='exp'){
   params_tmp <- params
   params_tmp[1] <- 1.0/params[1]
   params_tmp[2] <- params[2]/abs(params[1]) - params[3]
+  cat('Standard params:', params, '\n')
+  cat('Noven params:', params_tmp, '\n')
   
   pair_likehood_f <- PairPDFConstructor(params_noven = params_tmp, type = type) # yields a function of (xs, h)
   wrapper_with_jacobian <- function(data, h){
-    return(pair_likehood_f(data, h)*abs(params[1])^(-3))
+    if(params_tmp[2] <= 0.0){
+      return(-1000)
+    }else{
+      print(pair_likehood_f(data, h)*abs(params[1])^(3))
+      return(pair_likehood_f(data, h)*abs(params[1])^(3))
+    }
+    
   }
   return(PLConstructor(depth = depth, pair_likehood = wrapper_with_jacobian))
 }
@@ -221,7 +239,7 @@ TrawlPLFunctional <- function(params, depth, type='exp', parametrisation='standa
   
   # multiply by - 1
   return(function(data){
-    return(-1*PLOperator(data))})
+    return((-1)*PLOperator(data))})
 }
 
 TrawlPL <- function(data, depth, type='exp', parametrisation='standard'){
@@ -229,7 +247,7 @@ TrawlPL <- function(data, depth, type='exp', parametrisation='standard'){
     pl_functional <- TrawlPLFunctional(params = params,
                         depth = depth,
                         type=type,
-                        parametrisation=parametrisation)
+                        parametrisation=parametrisation) # returns a function of data
     return(pl_functional(data))
   })
 }
@@ -262,29 +280,31 @@ library(profvis)
 #   print(dac(test_params)/length(rdm_data))
 # })
 # 
-# profvis({
-#   test_params <- noven_example_params
-#   #set up as function of params
-#   set.seed(42)
-#   rdm_data <- pmax(rnorm(1000), 1.96) - 1.96
-#   dac <- TrawlPL(data = rdm_data, depth = 4, parametrisation='noven')
-#   
-#   optim(dac, par = test_params)
-# })
+profvis({
+  test_params <- noven_example_params
+  #set up as function of params
+  set.seed(42)
+  rdm_data <- pmax(rnorm(1000), 1.96) - 1.96
+  dac <- TrawlPL(data = rdm_data, depth = 4, parametrisation='noven')
+  dac(test_params)
+})
 
-test_params <- noven_example_params
-#set up as function of params
-set.seed(42)
-rdm_data <- pmax(rnorm(10000), 1.96) - 1.96
-dac <- TrawlPL(data = rdm_data, depth = 4, parametrisation='standard')
-test_params <- noven_example_params
-test_params[1] <- 1/test_params[1]
-test_params[2] <- (noven_example_params[2] + noven_example_params[3])/noven_example_params[1]
-dac(test_params)
+# optim(dac, par = test_params, method = 'L-BFGS-B', lower=c(0.1, 5, 1, 1e-1), upper=c(8, 30, 20, 1), control = list(trace=3))
 
-optim(dac, par = test_params, method = 'L-BFGS-B', lower=c(1, 1, 3, 1e-1), control = list(trace=3))
-
-
+# test_params <- noven_example_params
+# #set up as function of params
+# set.seed(42)
+# rdm_data <- pmax(rnorm(10000), 1.96) - 1.96
+# pollution_data <- read.csv('data/clean_pollution_data.csv')
+# dac <- TrawlPL(data = pollution_data$NO[1:1000], depth = 5, parametrisation='standard')
+# test_params <- noven_example_params
+# test_params[1] <- 1/test_params[1]
+# test_params[2] <- (noven_example_params[2] + noven_example_params[3])/noven_example_params[1]
+# dac(test_params)
+# 
+# optim(dac, par = test_params, method = 'L-BFGS-B', lower=c(0.001, 1, 1, 1e-1), upper=c(3, 10, 20, 1), control = list(trace=3))
+# 
+# 
 
 
 
