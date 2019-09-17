@@ -114,8 +114,8 @@ double CppCaseSeparator(NumericVector xs, double alpha, double beta, double kapp
 benchmark(CppCaseOneOne(c(1.0, 2.0), 0.1,0.1,0.1,0.1,0.3,0.1), replications = N)
 benchmark(CaseOneOne(c(1.0, 2.0), 0.1,0.1,0.1,0.1,0.3,0.1), replications = N)
 
-Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
-Rcpp::sourceCpp('cpp_core_utils.cpp')
+Sys.setenv("USE_CXX11" = "yes")
+Rcpp::sourceCpp('/Users/Valentin/Documents/GitHub/ev.trawl.cpp/src/cpp_core_utils.cpp')
 
 benchmark(CppCaseSeparator(c(1.0, 2.0), 0.1,0.1,0.1,0.1,0.3,0.1), replications = N)
 benchmark(CaseSeparator(c(1.0, 2.0), 0.1,0.1,0.1,0.1,0.3,0.1), replications = N)

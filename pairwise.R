@@ -1,9 +1,9 @@
 library('zeallot')
-Sys.setenv("PKG_CXXFLAGS"="-std=c++11")
 library(compiler)
 library(parallel)
 library(assertthat)
-Rcpp::sourceCpp('cpp_core_utils.cpp')
+# Rcpp::sourceCpp('cpp_core_utils.cpp')
+library('ev.trawl.cpp')
 
 CheckAllNonpositive <- function(elems){
   all(elems <= 0.0)
@@ -127,7 +127,7 @@ PairPDFConstructor <- function(params_noven, type='exp'){
   trawl_params <- params_noven[4:length(params_noven)]
   assertthat::assert_that(CheckAllPositive(trawl_params))
   return(function(xs, h){
-    return(CppCaseSeparator(xs,
+    return(ev.trawl.cpp::CppCaseSeparator(xs,
                             alpha = alpha,
                             beta = beta,
                             kappa = kappa,
@@ -140,62 +140,88 @@ PairPDFConstructor <- function(params_noven, type='exp'){
 
 
 
-PLConstructor <- function(depth, pair_likehood){
+PLConstructor <- function(depth, pair_likehood, parallel=TRUE){
   # returns function implementing Consecutive PL with depth depth
   stopifnot(depth >= 1)
   pl_f <- function(data){
     n_sample <- length(data)
-    # this_pl <- cmpfun(pair_likehood)
-    this_pl <- pair_likehood
-    # cores <- detectCores(logical = TRUE)
+    this_pl <- cmpfun(pair_likehood)
+    # this_pl <- pair_likehood
     
-    # cl <- makeCluster(cores)
-    # clusterExport(cl, c('CaseSeparator',
-    #                     'CppCaseSeparator',
-    #                     'data',
-    #                     'CheckAllNonpositive',
-    #                     'CaseOneOne',
-    #                     'CaseOneZero',
-    #                     'CaseZeroZero',
-    #                     'CppCaseOneOne',
-    #                     'CppCaseOneZero',
-    #                     'CppCaseZeroZero',
-    #                     'CheckAllPositive',
-    #                     'StandTrawlTerms',
-    #                     'TrawlExpB1',
-    #                     'TrawlExpB2',
-    #                     'TrawlExpB3'))
-    # 
-    log_pl_per_depth <- vapply(1:depth, # loop through depths
-               FUN = function(k){
-                  xs_stack <- cbind(data[1:(n_sample-k)], data[(k+1):(n_sample)])
-                  return(
-                      sum(
-                        # unlist(
-                          apply(
-                            # cl,
-                            X = xs_stack, 
-                            MARGIN = 1, 
-                            FUN = function(xs){
-                              pl_val <- this_pl(xs, h=k)
-                              # print(pl_val)
-                              if(pl_val < 0.0){
-                                # warning(paste('negative PL', this_pl(xs, h=k), '\n'))
-                                return(pl_val)
-                              }else{
-                                return(log(max(pl_val, 1e-9)))
-                              }})
-                        # )
-                    ))
-                },
-               FUN.VALUE = 1.0)
+    if(parallel){
+      cores <- detectCores(logical = TRUE)
+      cl <- makeCluster(cores)
+      clusterExport(cl, c('CaseSeparator',
+                          'CppCaseSeparator',
+                          'data',
+                          'CheckAllNonpositive',
+                          'CaseOneOne',
+                          'CaseOneZero',
+                          'CaseZeroZero',
+                          'CppCaseOneOne',
+                          'CppCaseOneZero',
+                          'CppCaseZeroZero',
+                          'CheckAllPositive',
+                          'StandTrawlTerms',
+                          'TrawlExpB1',
+                          'TrawlExpB2',
+                          'TrawlExpB3'))
+  
+      log_pl_per_depth <- vapply(1:depth, # loop through depths
+                 FUN = function(k){
+                    xs_stack <- cbind(data[1:(n_sample-k)], data[(k+1):(n_sample)])
+                    return(
+                        sum(
+                          unlist(
+                            parallel::parApply(
+                              cl,
+                              X = xs_stack, 
+                              MARGIN = 1, 
+                              FUN = function(xs){
+                                pl_val <- this_pl(xs, h=k)
+                                if(is.nan(pl_val)){print(xs)}
+                                # print(pl_val)
+                                if(pl_val < 0.0){
+                                  # warning(paste('negative PL', this_pl(xs, h=k), '\n'))
+                                  return(pl_val)
+                                }else{
+                                  return(log(max(pl_val, 1e-9)))
+                                }})
+                          )
+                      ))
+                  },
+                 FUN.VALUE = 1.0)
+      parallel::stopCluster(cl)
+    }else{
+      log_pl_per_depth <- vapply(1:depth, # loop through depths
+                                 FUN = function(k){
+                                   xs_stack <- cbind(data[1:(n_sample-k)], data[(k+1):(n_sample)])
+                                   return(
+                                     sum(
+                                         apply(
+                                           X = xs_stack, 
+                                           MARGIN = 1, 
+                                           FUN = function(xs){
+                                             pl_val <- this_pl(xs, h=k)
+                                             if(is.nan(pl_val)){print(xd)}
+                                             # print(pl_val)
+                                             if(pl_val < 0.0){
+                                               # warning(paste('negative PL', this_pl(xs, h=k), '\n'))
+                                               return(pl_val)
+                                             }else{
+                                               return(log(max(pl_val, 1e-9)))
+                                             }})
+                                     ))
+                                 },
+                                 FUN.VALUE = 1.0)
+    }
     return(sum(log_pl_per_depth))
   }
   
   return(pl_f)
 }
 
-TrawlPLStandard <- function(params, depth, type='exp'){
+TrawlPLStandard <- function(params, depth, type='exp', parallel=TRUE){
   # param with (xi, sigma, kappa, trawl_params)
   c(B1_func, B2_func, B3_func) %<-% GetTrawlFunctions(type)
   params_tmp <- params
@@ -209,15 +235,14 @@ TrawlPLStandard <- function(params, depth, type='exp'){
     if(params_tmp[2] <= 0.0){
       return(-1000)
     }else{
-      print(pair_likehood_f(data, h)*abs(params[1])^(3))
       return(pair_likehood_f(data, h)*abs(params[1])^(3))
     }
     
   }
-  return(PLConstructor(depth = depth, pair_likehood = wrapper_with_jacobian))
+  return(PLConstructor(depth = depth, pair_likehood = wrapper_with_jacobian, parallel=parallel))
 }
 
-TrawlPLNoven <- function(params, depth, type='exp'){
+TrawlPLNoven <- function(params, depth, type='exp', parallel=TRUE){
   # param with (xi, sigma, kappa, trawl_params)
   c(B1_func, B2_func, B3_func) %<-% GetTrawlFunctions(type)
   params_tmp <- params
@@ -227,14 +252,14 @@ TrawlPLNoven <- function(params, depth, type='exp'){
   #   return(pair_likehood_f(data, h)*abs(params[1])^(-3))
   # }
   # 
-  return(PLConstructor(depth = depth, pair_likehood = pair_likehood_f))
+  return(PLConstructor(depth = depth, pair_likehood = pair_likehood_f, parallel=parallel))
 }
 
   
-TrawlPLFunctional <- function(params, depth, type='exp', parametrisation='standard'){
+TrawlPLFunctional <- function(params, depth, type='exp', parametrisation='standard', parallel=TRUE){
   PLOperator <- switch(parametrisation,
-    'standard' = TrawlPLStandard(params = params, depth = depth, type = type),
-    'noven' =  TrawlPLNoven(params = params, depth = depth, type = type)
+    'standard' = TrawlPLStandard(params = params, depth = depth, type = type, parallel = parallel),
+    'noven' =  TrawlPLNoven(params = params, depth = depth, type = type, parallel = parallel)
   )
   
   # multiply by - 1
@@ -242,12 +267,13 @@ TrawlPLFunctional <- function(params, depth, type='exp', parametrisation='standa
     return((-1)*PLOperator(data))})
 }
 
-TrawlPL <- function(data, depth, type='exp', parametrisation='standard'){
+TrawlPL <- function(data, depth, type='exp', parametrisation='standard', parallel=TRUE){
   return(function(params){
     pl_functional <- TrawlPLFunctional(params = params,
                         depth = depth,
                         type=type,
-                        parametrisation=parametrisation) # returns a function of data
+                        parametrisation=parametrisation,
+                        parallel=parallel) # returns a function of data
     return(pl_functional(data))
   })
 }
@@ -258,18 +284,23 @@ ok <- TrawlPLFunctional(params = noven_example_params, depth = 4, parametrisatio
 
 #set up as function of params
 set.seed(42)
-rdm_data <- pmax(rnorm(1000), 0.0)
+rdm_data <- pmax(rnorm(10000), 0.0)
 ok(rdm_data)/length(rdm_data)
 
 library(profvis)
-# profvis({
-#   ok <- TrawlPLFunctional(params = noven_example_params, depth = 4, parametrisation='noven')
-# 
-#   #set up as function of params
-#   set.seed(42)
-#   rdm_data <- pmax(rnorm(1000), 0.0)
-#   ok(rdm_data)/length(rdm_data)
-# })
+profvis({
+  ok <- TrawlPLFunctional(params = noven_example_params, depth = 4, parametrisation='noven')
+  #set up as function of params
+  set.seed(42)
+  rdm_data <- pmax(rnorm(100000), 0.0)
+  ok(rdm_data)/length(rdm_data)
+  
+  ok <- TrawlPLFunctional(params = noven_example_params, depth = 4, parametrisation='noven', parallel = F)
+  #set up as function of params
+  set.seed(42)
+  rdm_data <- pmax(rnorm(100000), 0.0)
+  ok(rdm_data)/length(rdm_data)
+})
 # profvis({
 #   test_params <- noven_example_params
 #   #set up as function of params
