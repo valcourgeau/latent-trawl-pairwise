@@ -1,4 +1,45 @@
 
+acf_trawl <- function(h, alpha, beta, rho, kappa, delta = 0.1, end_seq = 50){
+  seq_kappa <- seq(kappa, end_seq, by = delta)
+  
+  b_h_minus_0 <- - alpha  * (1-exp(-rho*h))
+  b_0_minus_h <- - alpha  * (1-exp(-rho*h))
+  b_0_h <- - alpha * exp(-rho*h)
+  
+  res <- 0
+  first_mom <- 0
+  res_0 <- 0
+  beta <- beta
+  
+  # first_mom <- 0
+  
+  for(x in seq_kappa){
+    x <- x + delta / 2
+    # first_mom <- first_mom + (1+x/beta)^{-alpha}*(1+y/beta)^{-alpha}
+    for(y in seq_kappa){
+      y <- y + delta / 2
+      res <- res + (1+x/beta)^{b_h_minus_0} * (1+(x+y)/beta)^{b_0_h} * (1+y/beta)^{b_0_minus_h}
+      res_0 <- res_0 + (1+(x+y)/beta)^{-alpha}
+    }
+  }
+  
+  res <- res * delta^2
+  res_0 <- res_0 * delta^2
+  # first_mom <- first_mom * delta
+  first_mom_sq <-  ((1+kappa/beta)^{-alpha}*(beta+kappa)/(alpha - 1))^2
+  # print(res/res_0)
+  # print(first_mom^2)
+  # res <- (res - first_mom^2)^1 # first_mom_sq
+  # res_0 <- (res_0 - first_mom^2)^1 # first_mom_sq
+  return((res-first_mom_sq)/(res_0-first_mom_sq))
+}
+
+acf_trawl_num_approx <- function(h, alpha, beta, kappa, rho, delta=0.5){
+  vapply(h, function(h){
+    acf_trawl(h, alpha = alpha, beta = beta, kappa = kappa, 
+              rho = rho, delta = delta)}, 1)}
+
+
 DupuisSimplified <- function(data_u, mult_fac=c(0.3, 3), cl=NULL){
   params <- rep(0, 6)
   params[1:2] <- CustomMarginalMLE(data_u)
