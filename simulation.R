@@ -56,3 +56,6 @@ gf[1,2]
 tmp <- GammaGrid(alpha = 3, beta = 20, n = 2500, vanishing_depth = 30)
 tmp
 plot(GammaOrchestra(tmp))
+
+c(B1_func, B2_func, B3_func) %<-% GetTrawlFunctions(type='exp')
+B2_func(0.3, 1:10)

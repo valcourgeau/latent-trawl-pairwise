@@ -95,17 +95,15 @@ CaseSeparator <-  function(xs, alpha, beta, kappa, B1, B2, B3){
 TrawlExpB1 <- function(param, h){
   stopifnot(length(param) == 1)
   # cat('param B1', param, 'h', h, '\n')
-  assertthat::assert_that(CheckAllPositive(c(param, h)), msg = cat('params', param, '/ h', h,'\n'))
-  
-  return(exp(-param*h)/param)
+  # assertthat::assert_that(CheckAllPositive(c(param, h)), msg = cat('params', param, '/ h', h,'\n'))
+  return((1.0- exp(-param*h))/param)
 }
 
 TrawlExpB2 <- function(param, h){
   stopifnot(length(param) == 1)
   # cat('param B2', param, 'h', h, '\n')
-  assertthat::assert_that(CheckAllPositive(c(param, h)), msg = cat('params', param, '/ h', h,'\n'))
-  
-  return((1.0- exp(-param*h))/param)
+  # assertthat::assert_that(CheckAllPositive(c(param, h)), msg = cat('params', param, '/ h', h,'\n'))
+  return(exp(-param*h)/param)
 }
 
 TrawlExpB3 <- function(param, h){
