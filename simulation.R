@@ -58,4 +58,20 @@ tmp
 plot(GammaOrchestra(tmp))
 
 c(B1_func, B2_func, B3_func) %<-% GetTrawlFunctions(type='exp')
-B2_func(0.3, 1:10)
+B2_func(0.3, 0:10)
+
+(-B2_func(param = 0.8, h = 0:k)) %>% diff
+
+GetVanishingCoverage <- function(trawl_parameter, vanishing_depth, type='exp', get_value=F){
+  c(B1_func, B2_func, B3_func) %<-% GetTrawlFunctions(type=type)
+  max_val <- B2_func(trawl_parameter, h = 0.0)
+
+  coverage <- abs((-B2_func(param = trawl_parameter, h = c(0,vanishing_depth))) %>% diff %>% sum)/abs(max_val)
+  if(get_value){
+    return(coverage)
+  }else{
+    cat('Coverage:', round(coverage*100.0, 2), '%\n')
+  }
+}
+
+GetVanishingCoverage(trawl_parameter = 0.1, vanishing_depth = 30)
