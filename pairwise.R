@@ -290,13 +290,13 @@ profvis({
   ok <- TrawlPLFunctional(params = noven_example_params, depth = 4, parametrisation='noven')
   #set up as function of params
   set.seed(42)
-  rdm_data <- pmax(rnorm(100000), 0.0)
+  rdm_data <- pmax(rnorm(15000), 0.0)
   ok(rdm_data)/length(rdm_data)
   
   ok <- TrawlPLFunctional(params = noven_example_params, depth = 4, parametrisation='noven', parallel = F)
   #set up as function of params
   set.seed(42)
-  rdm_data <- pmax(rnorm(100000), 0.0)
+  rdm_data <- pmax(rnorm(15000), 0.0)
   ok(rdm_data)/length(rdm_data)
 })
 # profvis({
