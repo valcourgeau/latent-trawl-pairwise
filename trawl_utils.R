@@ -1,6 +1,6 @@
 GetTrawlFunctions <- function(type){
   return(switch (type,
-                 'exp' = c(TrawlExpB1, TrawlExpB2, TrawlExpB3)
+                 'exp' = c(ExponentialTrawl$TrawlB1, ExponentialTrawl$TrawlB2, ExponentialTrawl$TrawlB3)
   ))
 }
 
