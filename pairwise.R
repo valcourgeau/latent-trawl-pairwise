@@ -110,11 +110,7 @@ TrawlExpB3 <- function(param, h){
   return(TrawlExpB1(param, h))
 }
 
-GetTrawlFunctions <- function(type){
-  return(switch (type,
-                 'exp' = c(TrawlExpB1, TrawlExpB2, TrawlExpB3)
-  ))
-}
+source('trawl_utils.R')
 
 PairPDFConstructor <- function(params_noven, type='exp'){
   # params is (alpha, beta, kappa, trawl_params)

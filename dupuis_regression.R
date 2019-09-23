@@ -40,7 +40,7 @@ acf_trawl_num_approx <- function(h, alpha, beta, kappa, rho, delta=0.5){
               rho = rho, delta = delta)}, 1)}
 
 
-DupuisSimplified <- function(data_u, mult_fac=c(0.3, 3), cl=NULL){
+DupuisSimplified <- function(data_u, n_trials=10, mult_fac=c(0.3, 3), cl=NULL){
   params <- rep(0, 6)
   params[1:2] <- CustomMarginalMLE(data_u)
   p <- length(which(data_u > 0))/length(data_u)
@@ -70,7 +70,6 @@ DupuisSimplified <- function(data_u, mult_fac=c(0.3, 3), cl=NULL){
   # cat('kappa', kappa_tmp, '\n')
   # 
   
-  n_trials <- 10
   mae_tab <- rep(0, n_trials)
   mse_tab <- rep(0, n_trials)
   # rho_tab <- seq(0.01, (3), length.out = n_trials)

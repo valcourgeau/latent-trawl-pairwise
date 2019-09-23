@@ -152,13 +152,8 @@ lines(0:50/10, dgamma(0:50/10, shape = 3, rate = 3))
 
 ExceedancesSimulation <- function(params, parametrisation='standard', n, vanishing_depth, type, parallel=F){
   #TODO have a function that does exactly that: given a parametrisation type, changes it to noven
-  if(parametrisation == 'standard'){
-    params_trawl <- params
-    params_trawl[1] <- 1/params[1] # alpha
-    params_trawl[2] <- params[2]/abs(params[1]) - params[3] # beta
-  }else{
-    params_trawl <- params
-  }
+  
+  params_trawl <- ParametrisationTranslator(params = params, parametrisation = parametrisation)
   trawl_parameter <- params[4:length(params)]
   alpha <- params_trawl[1]
   beta <- params_trawl[2]

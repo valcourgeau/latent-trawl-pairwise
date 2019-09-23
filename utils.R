@@ -1,5 +1,3 @@
-
-
 GetKappa <- function(data, params, parametrisation='standard'){
   # params in standard parametrisation
   p_non_zero <- mean(as.numeric(data>0))
