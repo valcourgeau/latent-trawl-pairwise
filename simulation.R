@@ -172,10 +172,22 @@ ExceedancesSimulation <- function(params, parametrisation='standard', n, vanishi
                                       vanishing_depth = vanishing_depth,
                                       type = type,
                                       parallel = parallel)
+  trawl_simulation_unif <- TrawlSimulation(alpha = alpha,
+                                      beta = beta,
+                                      trawl_parameter = trawl_parameter,
+                                      n = n,
+                                      vanishing_depth = vanishing_depth,
+                                      type = type,
+                                      parallel = parallel)
+  GetVanishingCoverage(trawl_parameter = trawl_parameter, vanishing_depth = vanishing_depth, type=type)
   plot(trawl_simulation)
+  
+  corr_uniform <- pgamma(trawl_simulation_unif, shape=alpha, rate=beta)
+  acf(corr_uniform)
   probabilities_zero <- 1-exp(-kappa*trawl_simulation)
+  print(summary(probabilities_zero))
   uniform_samples <- runif(n = n, min = 0, max = 1.0)
-  plot(probabilities_zero)
+  uniform_samples <- corr_uniform
   exceedances <- apply(cbind(probabilities_zero, uniform_samples), MARGIN = 1,
                        FUN = function(p_and_u){
                         if(p_and_u[1] >= p_and_u[2]){
@@ -188,10 +200,11 @@ ExceedancesSimulation <- function(params, parametrisation='standard', n, vanishi
   return(exceedances)
 }
 
-example_params_noven <- c(6.33, 20.12, 12.18, 0.27)
-o <- ExceedancesSimulation(params = example_params_noven, parametrisation='noven', n = 10000, vanishing_depth = 30, type = 'exp')
+example_params_noven <- c(6.33, 20.12, 12.18, 0.1)
+o <- ExceedancesSimulation(params = example_params_noven, parametrisation='noven', n = 5000, vanishing_depth = 30, type = 'exp')
 # TODO Check trawl last one generated
 (o>0) %>% mean
+acf(o)
 acf(as.numeric(o>0))
 plot(o)
 is_pos <- as.numeric(o>0)
@@ -199,3 +212,4 @@ flags_chunk_2 <- zoo::rollapply(is_pos, width=2, FUN=function(chunk){sum(chunk)*
 abline(v=which(flags_chunk_2>0))
 flags_chunk_3 <- zoo::rollapply(is_pos, width=3, FUN=function(chunk){sum(chunk)*(chunk[1])*prod(chunk)}) > 0
 abline(v=which(flags_chunk_3>0), col='red')
+acf(o)
