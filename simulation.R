@@ -213,3 +213,4 @@ abline(v=which(flags_chunk_2>0))
 flags_chunk_3 <- zoo::rollapply(is_pos, width=3, FUN=function(chunk){sum(chunk)*(chunk[1])*prod(chunk)}) > 0
 abline(v=which(flags_chunk_3>0), col='red')
 acf(o)
+acf(is_pos)

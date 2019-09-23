@@ -15,3 +15,17 @@ CustomMarginalMLE <- function(data){
   
   return(stats::optim(par = init_guess[2:1], fn_mle, method='L-BFGS-B', lower=c(1e-03, 0.5), upper=c(2,20))$par)
 }
+
+GetKappa <- function(data, params, parametrisation='standard'){
+  # params in standard parametrisation
+  p_non_zero <- mean(as.numeric(data>0))
+  print(p_non_zero)
+  
+  if(parametrisation == 'standard'){
+    return(params[2]/abs(params[1])*(1-p_non_zero^{params[1]}))
+  }else{
+    if(parametrisation == 'noven'){
+      return(params[2]*(p_non_zero^{-1/params[1]}-1.0))
+    }
+  }
+}
