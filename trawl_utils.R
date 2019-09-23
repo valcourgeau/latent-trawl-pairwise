@@ -15,6 +15,14 @@ GetTrawlFunctions('sum_exp')[1][[1]]
 GetTrawlParamsConfig <- function(type){
   # returns triplet list (n_params, lower, upper) for each trawl type.
   return(switch (type,
-                 'exp' = list(n_params=1, lower=1e-5, upper=1.0)
+                 'exp' = list(n_params=1, lower=0.05, upper=1.0),
+                 'sum_exp' = list(n_params=5, lower=1e-5, upper=1.0)
+  ))
+}
+
+GetTrawlEnvs <- function(){
+  return(c(
+    'ExponentialTrawl',
+    'SumExponentialTrawl'
   ))
 }

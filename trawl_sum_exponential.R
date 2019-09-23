@@ -6,7 +6,8 @@ SumExponentialTrawl$SumExp <- function(param, h, trawl_f){
   trawl_val <- vapply(exp_trawl_params, function(par){
     trawl_f(param = par, h)
   }, rep(1.0, length(h)))    
-  trawl_val <- trawl_val * matrix(rep(param/sum(param), nrow(trawl_val)), ncol=n_sup, byrow = T)
+  
+  trawl_val <- trawl_val * matrix(rep(param/sum(param), length(h)), ncol=n_sup, byrow = T)
   return(rowSums(trawl_val))
 }
 

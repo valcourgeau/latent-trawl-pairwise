@@ -15,5 +15,5 @@ ExponentialTrawl$TrawlB2 <- function(param, h){
 }
 
 ExponentialTrawl$TrawlB3 <- function(param, h){
-  return(TrawlExpB1(param, h))
+  return(ExponentialTrawl$TrawlB1(param, h))
 }

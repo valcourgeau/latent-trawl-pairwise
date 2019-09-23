@@ -40,21 +40,22 @@ acf_trawl_num_approx <- function(h, alpha, beta, kappa, rho, delta=0.5){
               rho = rho, delta = delta)}, 1)}
 
 
-DupuisSimplified <- function(data_u, n_trials=10, mult_fac=c(0.3, 3), cl=NULL){
+DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.3, 3), cl=NULL){
   params <- rep(0, 6)
-  params[1:2] <- CustomMarginalMLE(data_u)
-  p <- length(which(data_u > 0))/length(data_u)
-  params[4] <- (1 - p^{params[1]}) * params[2]/abs(params[1])
-  params[5] <- 1.0/params[1]
-  params[6] <- params[2]/ abs(params[1]) - params[4]
+  custom_mle_results <- CustomMarginalMLE(data = data_u)
+  kappa <- GetKappa(data = data_u, params = custom_mle_results, parametrisation = 'standard')
+  params[1:3] <- c(custom_mle_results, kappa)
   
-  depth <- 10
-  kk <- acf(data_u, lag.max = depth-1, plot=F)
+  params[5] <- 1/params[1]
+  params[6] <- params[2]/abs(params[1]) - params[3]
+  
+  depth <- acf_depth
+  kk <- acf(as.numeric(data_u>0), lag.max = depth-1, plot=F)
   
   # print(params[1])
   alpha_tmp <- params[5]
   beta_tmp <- params[6]
-  kappa_tmp <- params[4]
+  kappa_tmp <- params[3]
   # if(params[1] > 0){
   #   alpha_tmp <- params[5]
   #   beta_tmp <- params[6]
@@ -77,8 +78,9 @@ DupuisSimplified <- function(data_u, n_trials=10, mult_fac=c(0.3, 3), cl=NULL){
   
   lin_rho <- line(x = c(0, 1:(depth-2)), log(kk$acf[1:(depth-1)] %>% abs))
   rho_tmp <- abs(lin_rho$coefficients[2])
+  print(rho_tmp)
   rho_tab <- seq(log(rho_tmp*mult_fac[1]), log(rho_tmp*mult_fac[2]), length.out = n_trials) %>% exp
-  
+  rho_tab <-seq(log(0.01), log(2.0), length.out = n_trials) %>% exp
   # plot(c(0.05, 1:(depth-1)), kk$acf, ylim=c(0,1))
   # print(kk$acf)
   
@@ -112,7 +114,7 @@ DupuisSimplified <- function(data_u, n_trials=10, mult_fac=c(0.3, 3), cl=NULL){
     index <- index + 1
   }
   
-  params[3] <- rho_tab[which.min(mse_tab)]
-  names(params) <- c('xi', 'sigma', 'rho', 'kappa', 'alpha', 'beta')
+  params[4] <- rho_tab[which.min(mse_tab)]
+  names(params) <- c('xi', 'sigma', 'kappa', 'rho', 'alpha', 'beta')
   return(params)
 }

@@ -100,7 +100,7 @@ n <- 10
 vanishing_depth <- 3
 gf <- GridFoundations(n, vanishing_depth)
 
-tmp <- GammaGrid(alpha = 3, beta = 20, n = 2500, vanishing_depth = 30)
+tmp <- GammaGrid(alpha = 3, beta = 20, n = 2500, vanishing_depth = 30, trawl_parameter = 0.1)
 tmp
 plot(GammaOrchestra(tmp))
 # 
@@ -167,36 +167,38 @@ ExceedancesSimulation <- function(params, parametrisation='standard', n, vanishi
                                       vanishing_depth = vanishing_depth,
                                       type = type,
                                       parallel = parallel)
-  trawl_simulation_unif <- TrawlSimulation(alpha = alpha,
-                                      beta = beta,
-                                      trawl_parameter = trawl_parameter,
-                                      n = n,
-                                      vanishing_depth = vanishing_depth,
-                                      type = type,
-                                      parallel = parallel)
+  # trawl_simulation_unif <- TrawlSimulation(alpha = alpha,
+  #                                     beta = beta,
+  #                                     trawl_parameter = trawl_parameter,
+  #                                     n = n,
+  #                                     vanishing_depth = vanishing_depth,
+  #                                     type = type,
+  #                                     parallel = parallel)
   GetVanishingCoverage(trawl_parameter = trawl_parameter, vanishing_depth = vanishing_depth, type=type)
   plot(trawl_simulation)
   
-  corr_uniform <- pgamma(trawl_simulation_unif, shape=alpha, rate=beta)
+  corr_uniform <- pgamma(trawl_simulation, shape=alpha, rate=beta)
   acf(corr_uniform)
   probabilities_zero <- 1-exp(-kappa*trawl_simulation)
   print(summary(probabilities_zero))
-  uniform_samples <- runif(n = n, min = 0, max = 1.0)
+  acf(probabilities_zero)
+  # uniform_samples <- runif(n = n, min = 0, max = 1.0)
   uniform_samples <- corr_uniform
+  
   exceedances <- apply(cbind(probabilities_zero, uniform_samples), MARGIN = 1,
                        FUN = function(p_and_u){
-                        if(p_and_u[1] >= p_and_u[2]){
+                        if(probability_zero_model >= p_and_u[2]){
                           return(0.0)
                         }else{
-                          return(eva::rgpd(1, loc = 0.0, scale = (beta+kappa)/alpha, shape = 1/alpha))
+                          return(eva::rgpd(1, loc = 0.0, scale = (beta+kappa)/abs(alpha), shape = 1/alpha))
                         }
   })
   
   return(exceedances)
 }
 
-example_params_noven <- c(6.33, 20.12, 12.18, 0.1)
-o <- ExceedancesSimulation(params = example_params_noven, parametrisation='noven', n = 5000, vanishing_depth = 30, type = 'exp')
+example_params_noven <- c(6.33, 20.12, 12.18, c(0.3,0.5,0.6))
+o <- ExceedancesSimulation(params = example_params_noven, parametrisation='noven', n = 5000, vanishing_depth = 50, type = 'sum_exp')
 # TODO Check trawl last one generated
 (o>0) %>% mean
 acf(o)

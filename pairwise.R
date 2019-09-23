@@ -92,23 +92,23 @@ CaseSeparator <-  function(xs, alpha, beta, kappa, B1, B2, B3){
   }
 }
 
-TrawlExpB1 <- function(param, h){
-  stopifnot(length(param) == 1)
-  # cat('param B1', param, 'h', h, '\n')
-  # assertthat::assert_that(CheckAllPositive(c(param, h)), msg = cat('params', param, '/ h', h,'\n'))
-  return((1.0- exp(-param*h))/param)
-}
-
-TrawlExpB2 <- function(param, h){
-  stopifnot(length(param) == 1)
-  # cat('param B2', param, 'h', h, '\n')
-  # assertthat::assert_that(CheckAllPositive(c(param, h)), msg = cat('params', param, '/ h', h,'\n'))
-  return(exp(-param*h)/param)
-}
-
-TrawlExpB3 <- function(param, h){
-  return(TrawlExpB1(param, h))
-}
+# TrawlExpB1 <- function(param, h){
+#   stopifnot(length(param) == 1)
+#   # cat('param B1', param, 'h', h, '\n')
+#   # assertthat::assert_that(CheckAllPositive(c(param, h)), msg = cat('params', param, '/ h', h,'\n'))
+#   return((1.0- exp(-param*h))/param)
+# }
+# 
+# TrawlExpB2 <- function(param, h){
+#   stopifnot(length(param) == 1)
+#   # cat('param B2', param, 'h', h, '\n')
+#   # assertthat::assert_that(CheckAllPositive(c(param, h)), msg = cat('params', param, '/ h', h,'\n'))
+#   return(exp(-param*h)/param)
+# }
+# 
+# TrawlExpB3 <- function(param, h){
+#   return(TrawlExpB1(param, h))
+# }
 
 source('trawl_utils.R')
 
@@ -131,7 +131,6 @@ PairPDFConstructor <- function(params_noven, type='exp'){
     ))
   })
 }
-
 
 
 PLConstructor <- function(depth, pair_likehood, parallel=TRUE){
@@ -157,9 +156,8 @@ PLConstructor <- function(depth, pair_likehood, parallel=TRUE){
                           'CppCaseZeroZero',
                           'CheckAllPositive',
                           'StandTrawlTerms',
-                          'TrawlExpB1',
-                          'TrawlExpB2',
-                          'TrawlExpB3'))
+                          GetTrawlEnvs()))
+      # clusterEvalQ(cl, c(ExponentialTrawl, SumExponential))
   
       log_pl_per_depth <- vapply(1:depth, # loop through depths
                  FUN = function(k){
@@ -173,7 +171,7 @@ PLConstructor <- function(depth, pair_likehood, parallel=TRUE){
                               MARGIN = 1, 
                               FUN = function(xs){
                                 pl_val <- this_pl(xs, h=k)
-                                if(is.nan(pl_val)){print(xs)}
+                                if(is.nan(pl_val)){print(xs); return(-10)}
                                 # print(pl_val)
                                 if(pl_val < 0.0){
                                   # warning(paste('negative PL', this_pl(xs, h=k), '\n'))
