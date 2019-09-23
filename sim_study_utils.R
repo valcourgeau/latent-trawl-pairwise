@@ -18,16 +18,17 @@ EVTrawlFit <- function(data, depth, parametrisation='standard', type='exp', para
   # rdm start
   #TODO add parallel L-BFGS-B
   trawl_res <- stats::optim(fn = trawl_pl_restricted,
-                            par = runif(n = trawl_cfg$n_params,
-                                        min = trawl_cfg$lower,
-                                        max = trawl_cfg$upper),
-                            lower = rep(trawl_cfg$lower, trawl_cfg$n_params),
-                            upper = rep(trawl_cfg$upper, trawl_cfg$n_params),
+                            par = vapply(1:trawl_cfg$n_params, function(i){
+                              runif(n = 1,
+                                    min = trawl_cfg$lower[i],
+                                    max = trawl_cfg$upper[i])
+                              }, 1.),
+                            lower = trawl_cfg$lower,
+                            upper = trawl_cfg$upper,
                             method = 'L-BFGS-B',
                             control = list(trace=3))
   
   return(c(params, trawl_res$par))
 }
 
-ev_fit <- EVTrawlFit(o, depth = 5, parametrisation = 'standard', type = 'exp')
-ev_fit
+

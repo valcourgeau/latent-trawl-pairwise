@@ -96,14 +96,14 @@ GammaOrchestra <- function(scaled_gamma_grid, parallel=T){
   }
 }
 
-n <- 10
-vanishing_depth <- 3
-gf <- GridFoundations(n, vanishing_depth)
-
-tmp <- GammaGrid(alpha = 3, beta = 20, n = 2500, vanishing_depth = 30, trawl_parameter = 0.1)
-tmp
-plot(GammaOrchestra(tmp))
+# n <- 10
+# vanishing_depth <- 3
+# gf <- GridFoundations(n, vanishing_depth)
 # 
+# tmp <- GammaGrid(alpha = 3, beta = 20, n = 2500, vanishing_depth = 30, trawl_parameter = 0.1)
+# tmp
+# plot(GammaOrchestra(tmp))
+# # 
 # c(B1_func, B2_func, B3_func) %<-% GetTrawlFunctions(type='exp')
 # B2_func(0.3, 0:10)
 # 
@@ -133,22 +133,22 @@ TrawlSimulation <- function(alpha, beta, n, vanishing_depth, trawl_parameter, ty
   return(GammaOrchestra(gamma_grid, parallel = parallel))
 }
 
-profvis::profvis({
-  set.seed(42)
-  trawl_sim <- TrawlSimulation(3,3,n=5000,vanishing_depth=30,0.3,'exp',parallel = F)
-})
-profvis::profvis({
-  set.seed(42)
-  trawl_sim <- TrawlSimulation(3,3,n=5000,vanishing_depth=30,0.3,'exp',parallel = T)
-})
-
-trawl_sim <- TrawlSimulation(3,3,n=10000,vanishing_depth=30,0.3,'exp')
-trawl_sim %>% plot
-trawl_sim %>% acf
-lines(1:15, exp(-0.3*1:15))
-
-plot(density(trawl_sim))
-lines(0:50/10, dgamma(0:50/10, shape = 3, rate = 3))
+# profvis::profvis({
+#   set.seed(42)
+#   trawl_sim <- TrawlSimulation(3,3,n=5000,vanishing_depth=30,0.3,'exp',parallel = F)
+# })
+# profvis::profvis({
+#   set.seed(42)
+#   trawl_sim <- TrawlSimulation(3,3,n=5000,vanishing_depth=30,0.3,'exp',parallel = T)
+# })
+# 
+# trawl_sim <- TrawlSimulation(3,3,n=10000,vanishing_depth=30,0.3,'exp')
+# trawl_sim %>% plot
+# trawl_sim %>% acf
+# lines(1:15, exp(-0.3*1:15))
+# 
+# plot(density(trawl_sim))
+# lines(0:50/10, dgamma(0:50/10, shape = 3, rate = 3))
 
 ExceedancesSimulation <- function(params, parametrisation='standard', n, vanishing_depth, type, parallel=F){
   #TODO have a function that does exactly that: given a parametrisation type, changes it to noven
@@ -197,17 +197,3 @@ ExceedancesSimulation <- function(params, parametrisation='standard', n, vanishi
   return(exceedances)
 }
 
-example_params_noven <- c(6.33, 20.12, 12.18, c(0.3,0.5,0.6))
-o <- ExceedancesSimulation(params = example_params_noven, parametrisation='noven', n = 5000, vanishing_depth = 50, type = 'sum_exp')
-# TODO Check trawl last one generated
-(o>0) %>% mean
-acf(o)
-acf(as.numeric(o>0))
-plot(o)
-is_pos <- as.numeric(o>0)
-flags_chunk_2 <- zoo::rollapply(is_pos, width=2, FUN=function(chunk){sum(chunk)*(chunk[1])*prod(chunk)}) > 0
-abline(v=which(flags_chunk_2>0))
-flags_chunk_3 <- zoo::rollapply(is_pos, width=3, FUN=function(chunk){sum(chunk)*(chunk[1])*prod(chunk)}) > 0
-abline(v=which(flags_chunk_3>0), col='red')
-acf(o)
-acf(is_pos)

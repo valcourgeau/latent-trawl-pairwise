@@ -2,8 +2,18 @@ library('zeallot')
 library(compiler)
 library(parallel)
 library(assertthat)
+library(magrittr)
 # Rcpp::sourceCpp('cpp_core_utils.cpp')
 library('ev.trawl.cpp')
+source('trawl_exponential.R')
+source('trawl_gamma.R')
+source('trawl_sup_ig.R')
+source('trawl_sum_exponential.R')
+source('trawl_utils.R')
+source('simulation.R')
+source('sim_study_utils.R')
+source('utils.R')
+source('dupuis_regression.R')
 
 CheckAllNonpositive <- function(elems){
   all(elems <= 0.0)
@@ -92,25 +102,6 @@ CaseSeparator <-  function(xs, alpha, beta, kappa, B1, B2, B3){
   }
 }
 
-# TrawlExpB1 <- function(param, h){
-#   stopifnot(length(param) == 1)
-#   # cat('param B1', param, 'h', h, '\n')
-#   # assertthat::assert_that(CheckAllPositive(c(param, h)), msg = cat('params', param, '/ h', h,'\n'))
-#   return((1.0- exp(-param*h))/param)
-# }
-# 
-# TrawlExpB2 <- function(param, h){
-#   stopifnot(length(param) == 1)
-#   # cat('param B2', param, 'h', h, '\n')
-#   # assertthat::assert_that(CheckAllPositive(c(param, h)), msg = cat('params', param, '/ h', h,'\n'))
-#   return(exp(-param*h)/param)
-# }
-# 
-# TrawlExpB3 <- function(param, h){
-#   return(TrawlExpB1(param, h))
-# }
-
-source('trawl_utils.R')
 
 PairPDFConstructor <- function(params_noven, type='exp'){
   # params is (alpha, beta, kappa, trawl_params)
@@ -156,7 +147,7 @@ PLConstructor <- function(depth, pair_likehood, parallel=TRUE){
                           'CppCaseZeroZero',
                           'CheckAllPositive',
                           'StandTrawlTerms',
-                          GetTrawlEnvs()))
+                          GetTrawlEnvsList()))
       # clusterEvalQ(cl, c(ExponentialTrawl, SumExponential))
   
       log_pl_per_depth <- vapply(1:depth, # loop through depths
@@ -270,29 +261,29 @@ TrawlPL <- function(data, depth, type='exp', parametrisation='standard', paralle
   })
 }
 
-
-noven_example_params <- c(6.33,20.12,12.18, 0.27)
-ok <- TrawlPLFunctional(params = noven_example_params, depth = 4, parametrisation='noven')
-
-#set up as function of params
-set.seed(42)
-rdm_data <- pmax(rnorm(10000), 0.0)
-ok(rdm_data)/length(rdm_data)
-
-library(profvis)
-profvis({
-  ok <- TrawlPLFunctional(params = noven_example_params, depth = 4, parametrisation='noven')
-  #set up as function of params
-  set.seed(42)
-  rdm_data <- pmax(rnorm(15000), 0.0)
-  ok(rdm_data)/length(rdm_data)
-  
-  ok <- TrawlPLFunctional(params = noven_example_params, depth = 4, parametrisation='noven', parallel = F)
-  #set up as function of params
-  set.seed(42)
-  rdm_data <- pmax(rnorm(15000), 0.0)
-  ok(rdm_data)/length(rdm_data)
-})
+# 
+# noven_example_params <- c(6.33,20.12,12.18, 0.27)
+# ok <- TrawlPLFunctional(params = noven_example_params, depth = 4, parametrisation='noven')
+# 
+# #set up as function of params
+# set.seed(42)
+# rdm_data <- pmax(rnorm(10000), 0.0)
+# ok(rdm_data)/length(rdm_data)
+# 
+# library(profvis)
+# profvis({
+#   ok <- TrawlPLFunctional(params = noven_example_params, depth = 4, parametrisation='noven')
+#   #set up as function of params
+#   set.seed(42)
+#   rdm_data <- pmax(rnorm(15000), 0.0)
+#   ok(rdm_data)/length(rdm_data)
+#   
+#   ok <- TrawlPLFunctional(params = noven_example_params, depth = 4, parametrisation='noven', parallel = F)
+#   #set up as function of params
+#   set.seed(42)
+#   rdm_data <- pmax(rnorm(15000), 0.0)
+#   ok(rdm_data)/length(rdm_data)
+# })
 # profvis({
 #   test_params <- noven_example_params
 #   #set up as function of params
@@ -303,14 +294,14 @@ profvis({
 #   print(dac(test_params)/length(rdm_data))
 # })
 # 
-profvis({
-  test_params <- noven_example_params
-  #set up as function of params
-  set.seed(42)
-  rdm_data <- pmax(rnorm(1000), 1.96) - 1.96
-  dac <- TrawlPL(data = rdm_data, depth = 4, parametrisation='noven')
-  dac(test_params)
-})
+# profvis({
+#   test_params <- noven_example_params
+#   #set up as function of params
+#   set.seed(42)
+#   rdm_data <- pmax(rnorm(1000), 1.96) - 1.96
+#   dac <- TrawlPL(data = rdm_data, depth = 4, parametrisation='noven')
+#   dac(test_params)
+# })
 
 # optim(dac, par = test_params, method = 'L-BFGS-B', lower=c(0.1, 5, 1, 1e-1), upper=c(8, 30, 20, 1), control = list(trace=3))
 
