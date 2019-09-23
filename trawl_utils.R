@@ -1,8 +1,16 @@
 GetTrawlFunctions <- function(type){
-  return(switch (type,
-                 'exp' = c(ExponentialTrawl$TrawlB1, ExponentialTrawl$TrawlB2, ExponentialTrawl$TrawlB3)
-  ))
+  select_env <- switch (type,
+                 'exp' = ExponentialTrawl,
+                 'sum_exp' = SumExponentialTrawl
+  )
+  
+  return(c(select_env$TrawlB1, select_env$TrawlB2, select_env$TrawlB3))
 }
+
+GetTrawlFunctions('exp')[1][[1]]
+GetTrawlFunctions('sum_exp')[1][[1]]
+
+
 
 GetTrawlParamsConfig <- function(type){
   # returns triplet list (n_params, lower, upper) for each trawl type.

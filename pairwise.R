@@ -197,7 +197,7 @@ PLConstructor <- function(depth, pair_likehood, parallel=TRUE){
                                            MARGIN = 1, 
                                            FUN = function(xs){
                                              pl_val <- this_pl(xs, h=k)
-                                             if(is.nan(pl_val)){print(xd)}
+                                             if(is.nan(pl_val)){print(xs);return(-10)}
                                              # print(pl_val)
                                              if(pl_val < 0.0){
                                                # warning(paste('negative PL', this_pl(xs, h=k), '\n'))
