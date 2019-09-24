@@ -6,7 +6,7 @@ acf(o)
 lines(0:50, acf_trawl_num_approx(0:50, 6.33, 20.12, 12.18, 0.1)*sqrt(0.05))
 
 acf(as.numeric(o>0))
-lines(0:50, acf_trawl_num_approx(0:50, 6.33, 20.12, 12.18, 0.1)*sqrt(0.05))
+lines(0:50, acf_trawl_num_approx(0:50, 6.33, 20.12, 12.18, 0.1))
 plot(o)
 is_pos <- as.numeric(o>0)
 flags_chunk_2 <- zoo::rollapply(is_pos, width=2, FUN=function(chunk){sum(chunk)*(chunk[1])*prod(chunk)}) > 0

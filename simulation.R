@@ -1,11 +1,9 @@
 library('zeallot')
 
-
-
 GridFoundations <- function(n, vanishing_depth, x=1){
   # returns a triangular matrix
   
-  n <- n # accomodate for warm-up
+  # n <- n + vanishing_depth# accomodate for warm-up
   
   n_elems_per_line <- vanishing_depth
   index_i <- unlist(lapply(1:max(2, n_elems_per_line), FUN = function(i){return(1:(n))}))

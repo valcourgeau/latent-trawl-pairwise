@@ -13,5 +13,5 @@ CustomMarginalMLE <- function(data){
     return(-log.like)
   }
   
-  return(stats::optim(par = init_guess[2:1], fn_mle, method='L-BFGS-B', lower=c(1e-03, 0.5), upper=c(2,20))$par)
+  return(stats::optim(par = init_guess[2:1], fn_mle, method='L-BFGS-B', lower=c(1e-03, 0.1), upper=c(2,20))$par)
 }
