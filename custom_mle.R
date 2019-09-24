@@ -5,7 +5,7 @@ CustomMarginalMLE <- function(data){
     data_for_mle <- data
     p <- length(which(data_for_mle>0)) / length(data_for_mle)
     kap <- (1-p^{par[1]})*par[2]/abs(par[1])
-    p_non_zero <- 1-(1+kap/(par[2]/abs(par[1])-kap))^{-par[1]}
+    p_non_zero <- 1-(1+kap/(par[2]/abs(par[1])-kap))^{-1/par[1]}
     like <- eva::dgpd(data_for_mle[data_for_mle>0.0], scale = par[2], shape=par[1],
                       loc=0, log.d = F) * p_non_zero
     
