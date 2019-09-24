@@ -5,6 +5,7 @@ library(assertthat)
 library(magrittr)
 # Rcpp::sourceCpp('cpp_core_utils.cpp')
 library('ev.trawl.cpp')
+source('custom_mle.R')
 source('trawl_exponential.R')
 source('trawl_gamma.R')
 source('trawl_sup_ig.R')
@@ -14,6 +15,7 @@ source('simulation.R')
 source('sim_study_utils.R')
 source('utils.R')
 source('dupuis_regression.R')
+
 
 CheckAllNonpositive <- function(elems){
   all(elems <= 0.0)
@@ -162,7 +164,7 @@ PLConstructor <- function(depth, pair_likehood, parallel=TRUE){
                               MARGIN = 1, 
                               FUN = function(xs){
                                 pl_val <- this_pl(xs, h=k)
-                                if(is.nan(pl_val)){print(xs); return(-10)}
+                                if(is.nan(pl_val)){cat('NA', xs, '\n'); return(-10)}
                                 # print(pl_val)
                                 if(pl_val < 0.0){
                                   # warning(paste('negative PL', this_pl(xs, h=k), '\n'))
@@ -186,7 +188,7 @@ PLConstructor <- function(depth, pair_likehood, parallel=TRUE){
                                            MARGIN = 1, 
                                            FUN = function(xs){
                                              pl_val <- this_pl(xs, h=k)
-                                             if(is.nan(pl_val)){print(xs);return(-10)}
+                                             if(is.nan(pl_val)){print(xs);return(-0.5)}
                                              # print(pl_val)
                                              if(pl_val < 0.0){
                                                # warning(paste('negative PL', this_pl(xs, h=k), '\n'))

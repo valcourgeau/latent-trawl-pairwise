@@ -183,14 +183,14 @@ ExceedancesSimulation <- function(params, parametrisation='standard', n, vanishi
   print(summary(probabilities_zero))
   acf(probabilities_zero)
   # uniform_samples <- runif(n = n, min = 0, max = 1.0)
-  uniform_samples <- corr_uniform
-  
-  exceedances <- apply(cbind(probabilities_zero, uniform_samples), MARGIN = 1,
+  uniform_samples <- 1-corr_uniform
+  print(summary(uniform_samples))
+  exceedances <- apply(cbind(probabilities_zero, uniform_samples, trawl_simulation), MARGIN = 1,
                        FUN = function(p_and_u){
                         if(probability_zero_model >= p_and_u[2]){
                           return(0.0)
                         }else{
-                          return(eva::rgpd(1, loc = 0.0, scale = (beta+kappa)/abs(alpha), shape = 1/alpha))
+                          return(rexp(n=1, rate=p_and_u[3])) #return(eva::rgpd(1, loc = 0.0, scale = (beta+kappa)/abs(alpha), shape = 1/alpha))
                         }
   })
   

@@ -7,12 +7,12 @@ GammaTrawl$LebA <- function(param){
 }
 
 GammaTrawl$TrawlB1 <- function(param, h){
-  return(SupIGTrawl$LebA(param)- GammaTrawl$TrawlB1(param, h))
+  return(SupIGTrawl$LebA(param)-GammaTrawl$TrawlB2(param, h))
 }
 
 
 GammaTrawl$TrawlB2 <- function(param, h){
-  return((1+h/param[1])^{1-param[2]}*GammaTrawl$LebA(param))
+  return(exp((1-param[2])*log(1+h/param[1]))*GammaTrawl$LebA(param))
 }
 
 
@@ -21,6 +21,6 @@ GammaTrawl$TrawlB3 <- function(param, h){
 }
 
 GammaTrawl$Config <- function(){
-  return(list(n_params=2, lower=c(0.01, 1.05), upper=c(10,5)))
+  return(list(n_params=2, lower=c(0.5, 1.0), upper=c(3,2.2)))
 }
 
