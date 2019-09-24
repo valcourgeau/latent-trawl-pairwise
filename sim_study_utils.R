@@ -31,4 +31,73 @@ EVTrawlFit <- function(data, depth, parametrisation='standard', type='exp', para
   return(c(params, trawl_res$par))
 }
 
+SubSampleFit <- function(data, depth, sub_length, trials, file_csv, parametrisation='standard', type='exp', parallel=F, subfolder='simulation/results/'){
+  n <- length(data)
+  start_points <- sample(1:(n-sub_length), size = trials, replace = F)
+  results <- matrix(0, nrow=trials, ncol=3+GetTrawlParamsConfig(type)$n_params)
+  
+  
+  if(parallel){
+    cores <- parallel::detectCores(logical = TRUE)
+    cl <- parallel::makeCluster(cores)
+    parallel::clusterExport(cl, c('CaseSeparator',
+                        'CppCaseSeparator',
+                        'data',
+                        'CheckAllNonpositive',
+                        'CaseOneOne',
+                        'CaseOneZero',
+                        'CaseZeroZero',
+                        'CppCaseOneOne',
+                        'CppCaseOneZero',
+                        'CppCaseZeroZero',
+                        'CheckAllPositive',
+                        'StandTrawlTerms',
+                        'EVTrawlFit',
+                        'CustomMarginalMLE',
+                        'GetKappa',
+                        'TrawlPL',
+                        'GetTrawlParamsConfig',
+                        'GetTrawlEnv',
+                        'TrawlPLFunctional',
+                        'TrawlPLStandard',
+                        'TrawlPLNoven',
+                        'GetTrawlFunctions',
+                        'PairPDFConstructor',
+                        'PLConstructor',
+                        'cmpfun',
+                        GetTrawlEnvsList()))
+    parallel::clusterEvalQ(cl, library(zeallot))
+    sub_sample_time <- Sys.time()
+    results <- parallel::parLapply(X = start_points,
+                        cl = cl,
+                        fun = function(start_pt){
+                          EVTrawlFit(data = data[start_pt:(start_pt+sub_length)],
+                                     depth = depth,
+                                     parametrisation = parametrisation,
+                                     type = type,
+                                     parallel = F)
+                        }, chunk.size = 5)
+    print(Sys.time() - sub_sample_time)
+    parallel::stopCluster(cl)
+    results <- matrix(unlist(results), ncol=length(results[[1]]), byrow = T)
+  }else{
+    sub_sample_time <- Sys.time()
+    results<- t(vapply(start_points,
+                       FUN = function(start_pt){
+                         EVTrawlFit(data = data[start_pt:(start_pt+sub_length)],
+                                    depth = depth,
+                                    parametrisation = parametrisation,
+                                    type = type,
+                                    parallel = F)
+                       },
+                       FUN.VALUE = rep(0, ncol(results))))
+    print(Sys.time() - sub_sample_time)
+  }
+  
+  
+  results <- rbind(c(n, depth, sub_length, trials, rep(0, GetTrawlParamsConfig(type)$n_params-1)), results)
+  
+  write.csv(results, file = paste(subfolder, file_csv, sep = ''))
+  return(results)
+}
 

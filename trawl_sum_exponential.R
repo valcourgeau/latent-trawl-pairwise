@@ -2,7 +2,7 @@ SumExponentialTrawl <- new.env()
 
 SumExponentialTrawl$SumExp <- function(param, h, trawl_f){
   n_sup <- length(param)
-  exp_trawl_params <- seq(from=1/n_sup, to=1, length.out = n_sup)
+  exp_trawl_params <- seq(from=0.01, to=1, length.out = n_sup)
   trawl_val <- vapply(exp_trawl_params, function(par){
     trawl_f(param = par, h)
   }, rep(1.0, length(h)))    
@@ -36,6 +36,6 @@ SumExponentialTrawl$TrawlB3 <- function(param, h){
 # SumExponentialTrawl$TrawlB3(c(1.0), h=0:10)
 
 SumExponentialTrawl$Config <- function(){
-  n_params <- 5
-  return(list(n_params=n_params, lower=rep(1e-1, n_params), upper=rep(1.0, n_params)))
+  n_params <- 3
+  return(list(n_params=n_params, lower=rep(1e-2, n_params), upper=rep(1.0, n_params)))
 }

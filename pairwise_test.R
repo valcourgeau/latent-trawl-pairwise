@@ -9,7 +9,7 @@ test_params <- noven_example_params
 test_params[1] <- 1/noven_example_params[1]
 test_params[2] <- (noven_example_params[2] + noven_example_params[3])/abs(noven_example_params[1])
 
-std_param_pl <- TrawlPL(data = pollution_data$NO2[1:100000], depth = 6, parametrisation='standard', parallel = T)
+std_param_pl <- TrawlPL(data = pollution_data$NO2[1:10000], depth = 6, parametrisation='standard', parallel = T, type = 'exp')
 std_param_pl(test_params)
 
 
