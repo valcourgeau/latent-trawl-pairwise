@@ -1,5 +1,5 @@
 CustomMarginalMLE <- function(data){
-  init_guess <- eva::gpdFit(data, 0.0)$par.sum$Estimate
+  init_guess <- eva::gpdFit(data, threshold = 0.0)$par.sum$Estimate
   
   fn_mle <- function(par){
     data_for_mle <- data

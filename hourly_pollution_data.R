@@ -62,7 +62,7 @@ if(PLOT.IT){
 }
 
 clean_data_to_save <- apply(std_clean_data, MARGIN = 2, FUN = function(x){return(pmax(x-quantile(x, 0.95), 0.0))})
-clean_data_to_save[,3] <- pmax(clean_data_to_save[,3]-quantile(clean_data_to_save[,3], 0.98), 0.0)
+clean_data_to_save[,3] <- pmax(std_clean_data[,3]-quantile(std_clean_data[,3], 0.98), 0.0)
 write.csv(clean_data_to_save, file = 'data/clean_pollution_data.csv')
 write.csv(gpd_fit_p_values_95, file = 'data/gpd_fit_p_values_95.csv')
 write.csv(gpd_fit_p_values_98, file = 'data/gpd_fit_p_values_98.csv')
