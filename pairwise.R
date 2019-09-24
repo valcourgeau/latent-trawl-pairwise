@@ -209,6 +209,56 @@ PLConstructor <- function(depth, pair_likehood, parallel=TRUE){
 TrawlPLStandard <- function(params, depth, type='exp', parallel=TRUE){
   # param with (xi, sigma, kappa, trawl_params)
   c(B1_func, B2_func, B3_func) %<-% GetTrawlFunctions(type)
+  # TODO add translator here
+  params_tmp <- params
+  params_tmp[1] <- 1.0/params[1]
+  params_tmp[2] <- params[2]/abs(params[1]) - params[3]
+  cat('Standard params:', params, '\n')
+  cat('Noven params:', params_tmp, '\n')
+  
+  pair_likehood_f <- PairPDFConstructor(params_noven = params_tmp, type = type) # yields a function of (xs, h)
+  wrapper_with_jacobian <- function(data, h){
+    if(params_tmp[2] <= 0.0){
+      return(-1000)
+    }else{
+      return(pair_likehood_f(data, h)*abs(params[1])^(3))
+    }
+    
+  }
+  return(PLConstructor(depth = depth, pair_likehood = wrapper_with_jacobian, parallel=parallel))
+}
+
+TransformationJacobian <- function(params, parametrisation, target_alpha=3){
+  params_std <- ParametrisationTranslator(params = params, parametrisation = parametrisation, target='standard')
+  
+  jacob_function <- function(z){
+    #takes transformed inputs
+    
+    upper <- eva::dgpd(z, loc = 0, scale = (1+params[3])*abs(target_alpha), shape = 1.0/target_alpha)
+    
+    inv_z <- TransformationMapInverse(z,)
+    lower <- eva::dgpd(inv_z, loc = 0, scale = (1+params[3])*abs(target_alpha), shape = 1.0/target_alpha)
+    return(upper/lower)
+  }
+  
+}
+
+TransformationMap <- function(x, params, target_alpha=3){
+  # from original to trf
+  target_beta <- 1+params[3]
+  
+    
+}
+
+TransformationMapInverse <- function(x, params, parametrisation){
+  # fromt trf to original
+  params[]
+}
+
+TrawlPLStandardTrf <- function(params, depth, type='exp', parallel=TRUE){
+  # param with (xi, sigma, kappa, trawl_params)
+  c(B1_func, B2_func, B3_func) %<-% GetTrawlFunctions(type)
+  # TODO add translator here
   params_tmp <- params
   params_tmp[1] <- 1.0/params[1]
   params_tmp[2] <- params[2]/abs(params[1]) - params[3]

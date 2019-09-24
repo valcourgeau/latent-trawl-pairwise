@@ -12,13 +12,23 @@ GetKappa <- function(data, params, parametrisation='standard'){
   }
 }
 
-ParametrisationTranslator <- function(params, parametrisation){
+ParametrisationTranslator <- function(params, parametrisation, target='noven'){
   # from parametrisation to noven
-  params_noven <- params
-  if(parametrisation == 'standard'){
-    params_noven[1] <- 1/params[1]
-    params_noven[2] <- params[2]/abs(params[1]) - params[3]
+  params_target <- params
+  
+  if(parametrisation == target){
+    return(params)
+  }
+  if(parametrisation == 'standard' & target=='noven'){
+    params_target[1] <- 1/params[1]
+    params_target[2] <- params[2]/abs(params[1]) - params[3]
+  }else{
+    if(parametrisation='noven' & target=='standard'){
+      params_target[1] <- 1/params[1]
+      params_target[2] <- (params[2] + params[3])/abs(params[1])
+    }
   }
   
-  return(params_noven)
+  return(params_target)
 }
+

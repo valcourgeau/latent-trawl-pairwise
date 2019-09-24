@@ -31,8 +31,9 @@ EVTrawlFit <- function(data, depth, parametrisation='standard', type='exp', para
   return(c(params, trawl_res$par))
 }
 
-SubSampleFit <- function(data, depth, sub_length, trials, file_csv, parametrisation='standard', type='exp', parallel=F, subfolder='simulation/results/'){
+SubSampleFit <- function(data, depth, sub_length, trials, file_csv, parametrisation='standard', type='exp', parallel=F, seed=42, subfolder='simulation/results/'){
   n <- length(data)
+  set.seed(seed)
   start_points <- sample(1:(n-sub_length), size = trials, replace = F)
   results <- matrix(0, nrow=trials, ncol=3+GetTrawlParamsConfig(type)$n_params)
   
