@@ -25,7 +25,6 @@ jittered_clean_data <-  apply(clean_data, MARGIN = 2, FUN =  function(x){
 })
 std_clean_data <- apply(jittered_clean_data, MARGIN = 2, FUN = function(x){x/sd(x)})
 
-
 # taking exceedances with 95% quantile
 final_clean_data <- apply(std_clean_data, MARGIN = 2, FUN = function(x){return(pmax(x-quantile(x, 0.95), 0.0))})
 gpd_fit_p_values <- apply(final_clean_data[1:10000,], MARGIN = 2, FUN = function(x){gPdtest::gpd.test(x[x>0], J = 2000)$p.values[1:2]})
