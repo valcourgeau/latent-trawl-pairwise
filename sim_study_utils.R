@@ -1,6 +1,6 @@
 
 EVTrawlFit <- function(data, depth, parametrisation='standard', type='exp', parallel=F){
-  custom_mle_results <- CustomMarginalMLE(data)
+  custom_mle_results <- CustomMarginalMLE(data, parametrisation)
   kappa <- GetKappa(data = data, params = custom_mle_results, parametrisation = 'standard')
   params <- c(custom_mle_results, kappa)
 

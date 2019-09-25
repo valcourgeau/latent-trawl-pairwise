@@ -127,7 +127,7 @@ PairPDFConstructor <- function(params_noven, type='exp'){
 }
 
 
-PLConstructor <- function(depth, pair_likehood, parallel=TRUE){
+PLConstructor <- function(depth, pair_likehood, parallel=TRUE, jacob_transform=NULL){
   # returns function implementing Consecutive PL with depth depth
   stopifnot(depth >= 1)
   pl_f <- function(data){
@@ -142,15 +142,15 @@ PLConstructor <- function(depth, pair_likehood, parallel=TRUE){
                           'CppCaseSeparator',
                           'data',
                           'CheckAllNonpositive',
-                          'CaseOneOne',
-                          'CaseOneZero',
-                          'CaseZeroZero',
                           'CppCaseOneOne',
                           'CppCaseOneZero',
                           'CppCaseZeroZero',
                           'CheckAllPositive',
                           'StandTrawlTerms',
-                          'PLOperator',
+                          'TransformationMapInverse',
+                          'TransformationMap',
+                          'TransformationJacobian',
+                          'ParametrisationTranslator',
                           GetTrawlEnvsList()))
       # clusterEvalQ(cl, c(ExponentialTrawl, SumExponential))
   
@@ -167,7 +167,6 @@ PLConstructor <- function(depth, pair_likehood, parallel=TRUE){
                               FUN = function(xs){
                                 pl_val <- this_pl(xs, h=k)
                                 if(is.nan(pl_val)){cat('NA', xs, '\n'); return(-10)}
-                                # print(pl_val)
                                 if(pl_val < 0.0){
                                   # warning(paste('negative PL', this_pl(xs, h=k), '\n'))
                                   return(pl_val)
@@ -178,6 +177,7 @@ PLConstructor <- function(depth, pair_likehood, parallel=TRUE){
                       ))
                   },
                  FUN.VALUE = 1.0)
+    
       parallel::stopCluster(cl)
     }else{
       log_pl_per_depth <- vapply(1:depth, # loop through depths
@@ -201,6 +201,18 @@ PLConstructor <- function(depth, pair_likehood, parallel=TRUE){
                                      ))
                                  },
                                  FUN.VALUE = 1.0)
+    }
+    
+    if(!is.null(jacob_transform)){
+      log_pl_per_depth <- log_pl_per_depth + vapply(1:depth, # loop through depths
+                                                    FUN = function(k){
+                                                      xs_stack <- cbind(data[1:(n_sample-k)], data[(k+1):(n_sample)])
+                                                      return(
+                                                        sum(
+                                                          log(jacob_transform(xs_stack))
+                                                        ))
+                                                    },
+                                                    FUN.VALUE = 1.0)
     }
     return(sum(log_pl_per_depth))
   }
@@ -239,21 +251,27 @@ TrawlPLStandardTrf <- function(params, depth, type='exp', parallel=TRUE, target_
   params_tmp <- params
   params_tmp[1] <- 1.0/params[1]
   params_tmp[2] <- params[2]/abs(params[1]) - params[3]
+  
+  params_tmp <- ParametrisationTranslator(params = params, parametrisation = 'standard', target = 'noven')
+  params_trf <- ParametrisationTranslator(params = params, parametrisation = 'standard', target = 'transform', target_alpha = target_alpha)
+  
   cat('Standard params:', params, '\n')
   cat('Noven params:', params_tmp, '\n')
+  cat('Trf params:', params_trf, '\n')
   
-  pair_likehood_f <- PairPDFConstructor(params_noven = params_tmp, type = type) # yields a function of (xs, h)
-  jacob <- TransformationJacobian(params = params, parametrisation = 'standard', target_alpha = target_alpha) # yields a function of x
+  
+  pair_likehood_f <- PairPDFConstructor(params_noven = params_trf, type = type) # yields a function of (xs, h)
+  jacob <- TransformationJacobian(params_std = params, params_trf = params_trf, target_alpha = target_alpha) # yields a function of x
   
   wrapper_with_jacobian_trf <- function(data, h){
     if(params_tmp[2] <= 0.0){
       return(-1000)
     }else{
-      return(jacob(data)*pair_likehood_f(data, h)*abs(params[1])^(3))
+      return(pair_likehood_f(TransformationMap(data, params_std = params, params_trf = params_trf), h)*abs(params[1])^(3))
     }
     
   }
-  return(PLConstructor(depth = depth, pair_likehood = wrapper_with_jacobian_trf, parallel=parallel))
+  return(PLConstructor(depth = depth, pair_likehood = wrapper_with_jacobian_trf, parallel=parallel, jacob_transform = jacob))
 }
 
 TrawlPLNoven <- function(params, depth, type='exp', parallel=TRUE){

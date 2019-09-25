@@ -1,11 +1,10 @@
 
-acf_trawl <- function(h, alpha, beta, rho, kappa, delta = 0.1, end_seq = 50){
-  seq_kappa <- seq(kappa, end_seq, by = delta)
-  
-  b_h_minus_0 <- - alpha  * (1-exp(-rho*h))
-  b_0_minus_h <- - alpha  * (1-exp(-rho*h))
-  b_0_h <- - alpha * exp(-rho*h)
-  
+acf_trawl <- function(h, alpha, beta, rho, kappa, delta = 0.1, end_seq = 50, type='exp'){
+  seq_kappa <- seq(kappa, kappa+end_seq, by = delta)
+  c(B1_func, B2_func, B3_func) %<-% GetTrawlFunctions(type)
+  b_h_minus_0 <- - alpha  * B1_func(param=rho, h=h)/(B1_func(param=rho, h=h) + B2_func(param=rho, h=h))
+  b_0_minus_h <- - alpha  * B3_func(param=rho, h=h)/(B1_func(param=rho, h=h) + B2_func(param=rho, h=h))
+  b_0_h <- - alpha * B2_func(param=rho, h=h)/(B1_func(param=rho, h=h) + B2_func(param=rho, h=h))
   res <- 0
   first_mom <- 0
   res_0 <- 0
@@ -34,10 +33,10 @@ acf_trawl <- function(h, alpha, beta, rho, kappa, delta = 0.1, end_seq = 50){
   return((res-first_mom_sq)/(res_0-first_mom_sq))
 }
 
-acf_trawl_num_approx <- function(h, alpha, beta, kappa, rho, delta=0.5){
+acf_trawl_num_approx <- function(h, alpha, beta, kappa, rho, delta=0.5, type='exp'){
   vapply(h, function(h){
     acf_trawl(h, alpha = alpha, beta = beta, kappa = kappa, 
-              rho = rho, delta = delta)}, 1)}
+              rho = rho, delta = delta, type = type)}, 1)}
 
 
 DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.3, 3), cl=NULL){
