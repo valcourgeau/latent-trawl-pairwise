@@ -150,6 +150,7 @@ PLConstructor <- function(depth, pair_likehood, parallel=TRUE){
                           'CppCaseZeroZero',
                           'CheckAllPositive',
                           'StandTrawlTerms',
+                          'PLOperator',
                           GetTrawlEnvsList()))
       # clusterEvalQ(cl, c(ExponentialTrawl, SumExponential))
   
@@ -231,7 +232,7 @@ TrawlPLStandard <- function(params, depth, type='exp', parallel=TRUE){
 
 
 
-TrawlPLStandardTrf <- function(params, depth, type='exp', parallel=TRUE){
+TrawlPLStandardTrf <- function(params, depth, type='exp', parallel=TRUE, target_alpha=3.0){
   # param with (xi, sigma, kappa, trawl_params)
   c(B1_func, B2_func, B3_func) %<-% GetTrawlFunctions(type)
   # TODO add translator here
@@ -242,15 +243,17 @@ TrawlPLStandardTrf <- function(params, depth, type='exp', parallel=TRUE){
   cat('Noven params:', params_tmp, '\n')
   
   pair_likehood_f <- PairPDFConstructor(params_noven = params_tmp, type = type) # yields a function of (xs, h)
-  wrapper_with_jacobian <- function(data, h){
+  jacob <- TransformationJacobian(params = params, parametrisation = 'standard', target_alpha = target_alpha) # yields a function of x
+  
+  wrapper_with_jacobian_trf <- function(data, h){
     if(params_tmp[2] <= 0.0){
       return(-1000)
     }else{
-      return(pair_likehood_f(data, h)*abs(params[1])^(3))
+      return(jacob(data)*pair_likehood_f(data, h)*abs(params[1])^(3))
     }
     
   }
-  return(PLConstructor(depth = depth, pair_likehood = wrapper_with_jacobian, parallel=parallel))
+  return(PLConstructor(depth = depth, pair_likehood = wrapper_with_jacobian_trf, parallel=parallel))
 }
 
 TrawlPLNoven <- function(params, depth, type='exp', parallel=TRUE){
@@ -267,9 +270,10 @@ TrawlPLNoven <- function(params, depth, type='exp', parallel=TRUE){
 }
 
   
-TrawlPLFunctional <- function(params, depth, type='exp', parametrisation='standard', parallel=TRUE){
+TrawlPLFunctional <- function(params, depth, type='exp', parametrisation='standard', parallel=TRUE, target_alpha=3.0){
   PLOperator <- switch(parametrisation,
     'standard' = TrawlPLStandard(params = params, depth = depth, type = type, parallel = parallel),
+    'std_trf' = TrawlPLStandardTrf(params = params, depth = depth, type = type, parallel = parallel, target_alpha = target_alpha),
     'noven' =  TrawlPLNoven(params = params, depth = depth, type = type, parallel = parallel)
   )
   

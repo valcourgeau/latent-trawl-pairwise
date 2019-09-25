@@ -16,5 +16,5 @@ abline(v=which(flags_chunk_3>0), col='red')
 acf(o)
 acf(is_pos)
 
-ev_fit <- EVTrawlFit(o, depth = 5, parametrisation = 'standard', type = 'exp')
+ev_fit <- EVTrawlFit(o, depth = 5, parametrisation = 'std_transform', type = 'exp')
 ev_fit
