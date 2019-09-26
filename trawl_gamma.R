@@ -21,6 +21,6 @@ GammaTrawl$TrawlB3 <- function(param, h){
 }
 
 GammaTrawl$Config <- function(){
-  return(list(n_params=2, lower=c(0.5, 1.7), upper=c(3,4)))
+  return(list(n_params=2, lower=c(0.5, 2.0), upper=c(3,4)))
 }
 

@@ -4,10 +4,18 @@ GetKappa <- function(data, params, parametrisation='standard'){
   print(p_non_zero)
   
   if(parametrisation == 'standard'){
-    return(params[2]/abs(params[1])*(1-p_non_zero^{params[1]}))
+    if(params[1] < 0){
+      return((p_non_zero^{-1./3.} - 1))
+    }else{
+      return(params[2]/abs(params[1])*(1-p_non_zero^{params[1]}))
+    }
   }else{
     if(parametrisation == 'noven'){
-      return(params[2]*(p_non_zero^{-1/params[1]}-1.0))
+      if(params[1] < 0){
+        return((p_non_zero^{-1./3.} - 1))
+      }else{
+        return(params[2]*(p_non_zero^{-1/params[1]}-1.0))
+      }
     }
   }
 }

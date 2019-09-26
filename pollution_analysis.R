@@ -5,10 +5,11 @@ pollution_data <- read.csv('data/clean_pollution_data.csv')
 #                         parallel = T,
 #                         type = 'exp')
 
+small <- (length(pollution_data$O3)-25000+1):length(pollution_data$O3)
 
 pd_small <- apply(pollution_data[,-1],
         function(x){
-          EVTrawlFit(x,
+          EVTrawlFit(x[small],
                  depth = 5,
                  parametrisation = 'standard',
                  type = 'exp', parallel = T)
@@ -16,9 +17,21 @@ pd_small <- apply(pollution_data[,-1],
 pd_small <- t(pd_small)
 pd_small
 
+pd_std_trf <- apply(pollution_data[,-1],
+                  function(x){
+                    EVTrawlFit(x[small],
+                               depth = 5,
+                               parametrisation = 'std_trf',
+                               type = 'exp', parallel = T, bounds = 'bd', n_trials=20, acf_depth=20)
+                  }, MARGIN = 2)
+pd_std_trf <- t(pd_std_trf)
+pd_std_trf
+
+# write.csv(pd_std_trf, file = 'analysis/pollution/pollution_std_trf_all_depth_5_25k.csv')
+
 pd_sum_exp <- apply(pollution_data[,-1],
             function(x){
-              EVTrawlFit(x,
+              EVTrawlFit(x[small],
                          depth = 5,
                          parametrisation = 'standard',
                          type = 'sum_exp', parallel = T)
@@ -28,7 +41,7 @@ pd_sum_exp
 
 pd_gamma <- apply(pollution_data[,-1],
                     function(x){
-                      EVTrawlFit(x,
+                      EVTrawlFit(x[small],
                                  depth = 5,
                                  parametrisation = 'standard',
                                  type = 'gamma', parallel = T)
@@ -39,15 +52,18 @@ pd_gamma
 # write.csv(pd, file = 'analysis/pollution/pollution_data_all_depth_4_25k.csv')
 
 
-par <- ParametrisationTranslator(c(0.1473961, 1.22013, 2.954886, 2.447258, 1.954441 ), 'standard', target = 'noven')
+par <- ParametrisationTranslator(pd_std_trf[3,], 'standard', target = 'noven')
+par
 alpha <- par[1]
 beta <- par[2]
 kappa <- par[3]
 trawl_param <- par[4:length(par)]
 acf_indices <- 0:50
-acf(pollution_data$CO)
-lines(acf_indices, -acf_trawl_num_approx(acf_indices, alpha = alpha, beta = beta, kappa = kappa, rho = trawl_param, type = 'gamma'))
+acf(pollution_data$NO[small])
+lines(acf_indices, acf_trawl_num_approx(acf_indices, alpha = alpha, beta = beta, kappa = kappa, rho = trawl_param, delta = 0.1, type = 'exp'))
 
+
+DupuisSimplified(data_u = pollution_data$O3[small], n_trials = 20, acf_depth = 20)
 
 
 par <- ParametrisationTranslator(pd[5,], 'standard', target = 'noven')

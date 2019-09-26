@@ -37,5 +37,5 @@ SumExponentialTrawl$TrawlB3 <- function(param, h){
 
 SumExponentialTrawl$Config <- function(){
   n_params <- 4
-  return(list(n_params=n_params, lower=rep(1e-2, n_params), upper=rep(1.0, n_params)))
+  return(list(n_params=n_params, lower=rep(1e-3, n_params), upper=rep(1.0, n_params)))
 }

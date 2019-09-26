@@ -1,5 +1,5 @@
 
-EVTrawlFit <- function(data, depth, parametrisation='standard', type='exp', parallel=F){
+EVTrawlFit <- function(data, depth, parametrisation='standard', type='exp', parallel=F, bounds='config', ...){
   custom_mle_results <- CustomMarginalMLE(data, parametrisation)
   kappa <- GetKappa(data = data, params = custom_mle_results, parametrisation = 'standard')
   params <- c(custom_mle_results, kappa)
@@ -17,16 +17,32 @@ EVTrawlFit <- function(data, depth, parametrisation='standard', type='exp', para
   
   # rdm start
   #TODO add parallel L-BFGS-B
-  trawl_res <- stats::optim(fn = trawl_pl_restricted,
-                            par = vapply(1:trawl_cfg$n_params, function(i){
-                              runif(n = 1,
-                                    min = trawl_cfg$lower[i],
-                                    max = trawl_cfg$upper[i])
+  if(bounds == 'config'){
+    trawl_res <- stats::optim(fn = trawl_pl_restricted,
+                              par = vapply(1:trawl_cfg$n_params, function(i){
+                                runif(n = 1,
+                                      min = trawl_cfg$lower[i],
+                                      max = trawl_cfg$upper[i])
                               }, 1.),
-                            lower = trawl_cfg$lower,
-                            upper = trawl_cfg$upper,
-                            method = 'L-BFGS-B',
-                            control = list(trace=3))
+                              lower = trawl_cfg$lower,
+                              upper = trawl_cfg$upper,
+                              method = 'L-BFGS-B',
+                              control = list(trace=3))
+  }else{
+    trawl_p <- DupuisSimplified(data_u = data, ...)[4:(4+trawl_cfg$n_params-1)]
+    cat('trawl_p', trawl_p, '\n')
+    trawl_res <- stats::optim(fn = trawl_pl_restricted,
+                              par = vapply(1:trawl_cfg$n_params, function(i){
+                                runif(n = 1,
+                                      min = trawl_cfg$lower[i],
+                                      max = trawl_cfg$upper[i])
+                              }, 1.),
+                              lower = trawl_p*0.8,
+                              upper = trawl_p*1.2,
+                              method = 'L-BFGS-B',
+                              control = list(trace=3))
+  }
+
   
   return(c(params, trawl_res$par))
 }
