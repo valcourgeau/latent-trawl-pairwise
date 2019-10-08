@@ -158,6 +158,7 @@ ExceedancesSimulation <- function(params, parametrisation='standard', n, vanishi
   kappa <- params_trawl[3]
   probability_zero_model <- 1-(1+kappa/beta)^{-alpha}
   cat('probability_zero_model', probability_zero_model, '\n')
+  
   trawl_simulation <- TrawlSimulation(alpha = alpha,
                                       beta = beta,
                                       trawl_parameter = trawl_parameter,
@@ -165,6 +166,10 @@ ExceedancesSimulation <- function(params, parametrisation='standard', n, vanishi
                                       vanishing_depth = vanishing_depth,
                                       type = type,
                                       parallel = parallel)
+  plot(density(trawl_simulation))
+  print(
+    fitdistrplus::fitdist(trawl_simulation, distr = "gamma", method = "mle")
+  )
   # trawl_simulation_unif <- TrawlSimulation(alpha = alpha,
   #                                     beta = beta,
   #                                     trawl_parameter = trawl_parameter,
@@ -173,25 +178,67 @@ ExceedancesSimulation <- function(params, parametrisation='standard', n, vanishi
   #                                     type = type,
   #                                     parallel = parallel)
   GetVanishingCoverage(trawl_parameter = trawl_parameter, vanishing_depth = vanishing_depth, type=type)
-  plot(trawl_simulation)
   
   corr_uniform <- pgamma(trawl_simulation, shape=alpha, rate=beta)
-  acf(corr_uniform)
-  probabilities_zero <- 1-exp(-kappa*trawl_simulation)
+  cat('kappa', kappa, '\n')
+  probabilities_zero <- 1-exp(-kappa*trawl_simulation) # TODO should be 1-exp()
   print(summary(probabilities_zero))
-  acf(probabilities_zero)
-  # uniform_samples <- runif(n = n, min = 0, max = 1.0)
+  
+  # cat('mean prob zero', mean(probabilities_zero), '\n')
+  # uniform_samples <- runif(n = n, min = 0, max = 1)
   uniform_samples <- 1-corr_uniform
-  print(summary(uniform_samples))
+  # print(summary(uniform_samples))
+  # exceedances <- apply(cbind(probabilities_zero, uniform_samples, trawl_simulation), MARGIN = 1,
+  #                      FUN = function(p_and_u){
+  #                       if(p_and_u[1] <= quantile(probabilities_zero, probability_zero_model)){#quantile(probabilities_zero, probability_zero_model)){
+  #                         return(0.0)
+  #                       }else{
+  #                         return(rexp(n=1, rate=p_and_u[3])) #return(eva::rgpd(1, loc = 0.0, scale = (beta+kappa)/abs(alpha), shape = 1/alpha))
+  #                       }
+  # })
+  
+  prev_sample <- NULL
+  c(B1_func, B2_func, B3_func) %<-% GetTrawlFunctions(type)
+  b_1_minus_0 <- - alpha  * B1_func(param=trawl_parameter, h=1)/(B1_func(param=trawl_parameter, h=1) + B2_func(param=trawl_parameter, h=1))
+  b_0_minus_1 <- - alpha  * B3_func(param=trawl_parameter, h=1)/(B1_func(param=trawl_parameter, h=1) + B2_func(param=trawl_parameter, h=1))
+  b_0_1 <- - alpha * B2_func(param=trawl_parameter, h=1)/(B1_func(param=trawl_parameter, h=1) + B2_func(param=trawl_parameter, h=1))
+
   exceedances <- apply(cbind(probabilities_zero, uniform_samples, trawl_simulation), MARGIN = 1,
                        FUN = function(p_and_u){
-                        if(probability_zero_model >= p_and_u[2]){
-                          return(0.0)
-                        }else{
-                          return(rexp(n=1, rate=p_and_u[3])) #return(eva::rgpd(1, loc = 0.0, scale = (beta+kappa)/abs(alpha), shape = 1/alpha))
-                        }
-  })
+                         if(is.null(prev_sample)){
+                           if(p_and_u[1] <= quantile(probabilities_zero, probability_zero_model)){#quantile(probabilities_zero, probability_zero_model)){
+                             prev_sample <<- 0.0
+                           }else{
+                             prev_sample <<- rexp(n=1, rate=p_and_u[3]) #return(eva::rgpd(1, loc = 0.0, scale = (beta+kappa)/abs(alpha), shape = 1/alpha))
+                           }
+                         }else{
+                           # prpba P(X_t>0, X_t+h>0)
+                           extreme_proba <- (1+(kappa+prev_sample)/beta)^{b_0_minus_1} *
+                             (1+(2*kappa+prev_sample)/beta)^{b_0_1} *
+                             (1+(kappa)/beta)^{b_1_minus_0}
+
+                           if(prev_sample > 0.0){
+                             extreme_proba <- extreme_proba * (1+(kappa+prev_sample)/beta)^{alpha}
+                             print(extreme_proba)
+                             if(p_and_u[2] > extreme_proba){#quantile(probabilities_zero, probability_zero_model)){
+                               prev_sample <<- 0.0
+                             }else{
+                               prev_sample <<- rexp(n=1, rate=p_and_u[3]) #return(eva::rgpd(1, loc = 0.0, scale = (beta+kappa)/abs(alpha), shape = 1/alpha))
+                             }
+                           }else{
+                             extreme_proba <- ((1+(kappa+prev_sample)/beta)^{-alpha} - extreme_proba) / (1-(1+(kappa+prev_sample)/beta)^{-alpha})
+                             print(extreme_proba)
+                             if(p_and_u[2] > extreme_proba){#quantile(probabilities_zero, probability_zero_model)){
+                               prev_sample <<- 0.0
+                             }else{
+                               prev_sample <<- rexp(n=1, rate=p_and_u[3]) #return(eva::rgpd(1, loc = 0.0, scale = (beta+kappa)/abs(alpha), shape = 1/alpha))
+                             }
+                           }
+                         }
+                         return(prev_sample)
+                       })
   
-  return(exceedances)
+  
+  return(cbind(exceedances, trawl_simulation))
 }
 
