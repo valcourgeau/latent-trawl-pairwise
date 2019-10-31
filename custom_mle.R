@@ -1,7 +1,7 @@
-CustomMarginalMLE <- function(data, parametrisation='standard'){
-  init_guess <- eva::gpdFit(data, threshold = 0.0)$par.sum$Estimate
+CustomLikelihood <- function(data, parametrisation='standard'){
+  # returns a function of parameters
   
-  fn_mle <- function(par){
+  return(function(par){
     data_for_mle <- data
     p <- length(which(data_for_mle>0)) / length(data_for_mle)
     
@@ -19,7 +19,40 @@ CustomMarginalMLE <- function(data, parametrisation='standard'){
     
     log.like <- sum(log(like)) + length(data_for_mle == 0.0) * log(1-p_non_zero)
     return(-log.like)
+  })
+}
+
+
+CompositeLikelihood <- function(data, parametrisation='standard'){
+  # returns a function of parameters
+  
+  return(function(par){
+    data_for_mle <- data
+  
+    data[data > 0] <- -log(1+par[1]*(par[3] + data[data > 0])/par[2])/par[1]
+    data[data == 0.0] <- -log(1-(1+par[1]*(par[3])/par[2])^{-1/par[1]})
+    return(mean(data))
+    
+  })
+}
+
+CustomMarginalMLE <- function(data, parametrisation='standard'){
+  init_guess <- eva::gpdFit(data, threshold = 0.0)$par.sum$Estimate
+  
+  fn_mle <- CustomLikelihood(data = data, parametrisation = parametrisation)
+  
+  lower <- c(1e-03, 0.1)
+  if(parametrisation == 'std_trf'){
+    lower <- c(-2, 0.1)
   }
+  
+  return(stats::optim(par = init_guess[2:1], fn_mle, method='L-BFGS-B', lower=lower, upper=c(2,20))$par)
+}
+
+CompositeMarginalMLE <- function(data, parametrisation='standard'){
+  init_guess <- eva::gpdFit(data, threshold = 0.0)$par.sum$Estimate
+  
+  fn_mle <- CompositeLikelihood(data = data, parametrisation = parametrisation)
   
   lower <- c(1e-03, 0.1)
   if(parametrisation == 'std_trf'){
