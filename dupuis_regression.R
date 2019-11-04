@@ -187,8 +187,8 @@ DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.1, 
     index <- index + 1
   }
   
-  plot(rho_tab, mse_tab)
-  points(rho_tab, mae_tab, col='red')
+  # plot(rho_tab, mse_tab)
+  # points(rho_tab, mae_tab, col='red')
   params[4] <- rho_tab[which.min(mse_tab)]
   
   if(params_original[1] >= 0){

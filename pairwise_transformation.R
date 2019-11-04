@@ -26,6 +26,7 @@ TransformationMapInverse <- function(x, params_std, params_trf, target_alpha=3){
   # params_std <- ParametrisationTranslator(params = params,
   #                                         parametrisation = parametrisation,
   #                                         target = 'standard')
+  print(params_trf)
   x[which(x>0.0)] <- eva::qgpd(p = eva::pgpd(q = x[which(x>0.0)],
                                              loc = 0.0,
                                              shape = params_trf[1],
@@ -58,7 +59,7 @@ TransformationJacobian <- function(params_std, params_trf, target_alpha=3){
 
 set.seed(42)
 gpd_sample_1 <- eva::rgpd(n = 10000, loc = 0.0, scale = (1+10)/3, shape = 1/3.0)
-plot(sort(gpd_sample_1), sort(TransformationJacobian(c(3.0, 1, 10), 'noven')(gpd_sample_1)))
+plot(sort(gpd_sample_1), sort(TransformationJacobian(c(3.0, 1, 10), c(3.0, 1, 10))(gpd_sample_1)))
 
 set.seed(42)
 gpd_sample <- eva::rgpd(n = 10000, loc = 0.0, scale = 5, shape = -0.2)
