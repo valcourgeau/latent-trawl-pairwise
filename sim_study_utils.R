@@ -65,7 +65,12 @@ SubSampleFit <- function(data, depth, sub_length, method, trials, file_csv, para
     parallel::clusterExport(cl, c('CaseSeparator',
                         'CppCaseSeparator',
                         'data',
+                        'DupuisSimplified',
+                        'CustomLikelihood',
                         'CheckAllNonpositive',
+                        'TransformationMap',
+                        'acf_trawl',
+                        'ParametrisationTranslator',
                         'CaseOneOne',
                         'CaseOneZero',
                         'CaseZeroZero',
@@ -86,9 +91,10 @@ SubSampleFit <- function(data, depth, sub_length, method, trials, file_csv, para
                         'GetTrawlFunctions',
                         'PairPDFConstructor',
                         'PLConstructor',
-                        'cmpfun',
                         GetTrawlEnvsList()))
     parallel::clusterEvalQ(cl, library(zeallot))
+    parallel::clusterEvalQ(cl, library(compiler))
+    
     sub_sample_time <- Sys.time()
     results <- parallel::parLapply(X = start_points,
                         cl = cl,

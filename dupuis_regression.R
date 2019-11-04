@@ -31,12 +31,7 @@ acf_trawl <- function(h, alpha, beta, rho, kappa, delta = 0.1, end_seq = 50, typ
   res <- final_sum[1]
   res_0 <- final_sum[2]
   first_mom_sq <-  ((1+kappa/beta)^{-alpha}*(beta+kappa)/(alpha - 1))^2
-  if(h < 1){
-    cat('res', res, '\n')
-    cat('res_0', res_0, '\n')
-    print(first_mom_sq)
-  }
-  
+
   if(cov){
     return(res-first_mom_sq)
   }else{
@@ -132,7 +127,7 @@ acf_trawl_num_approx_inv <- function(h, alpha, beta, kappa, rho, delta=0.5, type
               rho = rho, delta = delta, type = type, cov = cov)}, 1)}
 
 
-DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.3, 3), cl=NULL){
+DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.1, 1.5), cl=NULL){
   params <- rep(0, 6)
   custom_mle_results <- CustomMarginalMLE(data = data_u, 'std_trf')
   kappa <- GetKappa(data = data_u, params = custom_mle_results, parametrisation = 'standard')
@@ -164,20 +159,15 @@ DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.3, 
   alpha_tmp <- params[5]
   beta_tmp <- params[6]
   kappa_tmp <- params[3]
-  print(params)
-  print('BETA TMP')
-  print(beta_tmp)
   
   mae_tab <- rep(0, n_trials)
   mse_tab <- rep(0, n_trials)
   # rho_tab <- seq(0.01, (3), length.out = n_trials)
   index <- 1
-  
-  lin_rho <- line(x = c(0, 1:(depth-2)), log(kk$acf[1:(depth-1)] %>% abs))
-  rho_tmp <- abs(lin_rho$coefficients[2])
-  print(rho_tmp)
-  rho_tab <- seq(log(rho_tmp*mult_fac[1]), log(rho_tmp*mult_fac[2]), length.out = n_trials) %>% exp
-  # rho_tab <-seq(log(0.01), log(2.0), length.out = n_trials) %>% exp
+  # lin_rho <- line(x = c(0, 1:(depth-2)), abs(log(pmax(kk$acf[1:(depth-1)], 1e-7))))
+  # rho_tmp <- abs(lin_rho$coefficients[2])
+  # rho_tab <- exp(seq(log(rho_tmp*mult_fac[1]), log(rho_tmp*mult_fac[2]), length.out = n_trials))
+  rho_tab <- exp(seq(log(0.01), log(1.0), length.out = n_trials))
   
   for(rho_iter in rho_tab){
     if(!is.null(cl)){
@@ -192,15 +182,13 @@ DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.3, 
                   rho = rho_iter, delta = 0.5, end_seq = 50)}, 1)
     }
     
-    plot(kk$acf)
-    lines(acf_vals, col='red')
     mae_tab[index] <- sum(abs(kk$acf - acf_vals)) 
     mse_tab[index] <- sum(((kk$acf - acf_vals)^2))
     index <- index + 1
   }
   
   plot(rho_tab, mse_tab)
-  points(exp(rho_tab), mae_tab)
+  points(rho_tab, mae_tab, col='red')
   params[4] <- rho_tab[which.min(mse_tab)]
   
   if(params_original[1] >= 0){
