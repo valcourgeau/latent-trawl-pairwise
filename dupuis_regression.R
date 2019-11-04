@@ -18,7 +18,7 @@ acf_trawl <- function(h, alpha, beta, rho, kappa, delta = 0.1, end_seq = 50, typ
     sum_over_y <- vapply(X = seq_kappa, FUN = function(y){
                     y <- y + delta / 2
                     tmp1 <- (1+x/beta)^{b_h_minus_0} * (1+(x+y)/beta)^{b_0_h} * (1+y/beta)^{b_0_minus_h}
-                    tmp2 <- 0.5*(1+(x/2+y/2)/beta)^{-alpha}
+                    tmp2 <- (1+(x+y)/beta)^{-alpha}
                     return(c(tmp1, tmp2))
                   },
                   FUN.VALUE = rep(0, 2))
@@ -31,11 +31,11 @@ acf_trawl <- function(h, alpha, beta, rho, kappa, delta = 0.1, end_seq = 50, typ
   res <- final_sum[1]
   res_0 <- final_sum[2]
   first_mom_sq <-  ((1+kappa/beta)^{-alpha}*(beta+kappa)/(alpha - 1))^2
-  # if(h < 1){
-  #   cat('res', res, '\n')
-  #   cat('res_0', res_0, '\n')
-  #   print(first_mom_sq)
-  # }
+  if(h < 1){
+    cat('res', res, '\n')
+    cat('res_0', res_0, '\n')
+    print(first_mom_sq)
+  }
   
   if(cov){
     return(res-first_mom_sq)
@@ -142,6 +142,10 @@ DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.3, 
     parametrisation = 'standard',
     target = 'noven')[1:2]
   print(params)
+  
+  Marginal
+  
+  
   depth <- acf_depth
   kk <- acf(as.numeric(data_u>0), lag.max = depth-1, plot=F)
   
@@ -168,7 +172,7 @@ DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.3, 
                          rho = rho_iter, delta = 0.5, end_seq = 50))})
       acf_vals <- unlist(acf_vals)
     }else{
-      acf_vals <- vapply(c(0.05, 1:(depth-1)), function(h){
+      acf_vals <- vapply(c(0.01, 1:(depth-1)), function(h){
         acf_trawl(h, alpha = alpha_tmp, beta = beta_tmp, kappa = kappa_tmp, 
                   rho = rho_iter, delta = 0.5, end_seq = 50)}, 1)
     }
@@ -180,7 +184,7 @@ DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.3, 
     index <- index + 1
   }
   
-  plot(exp(rho_tab), mse_tab)
+  plot(rho_tab, mse_tab)
   points(exp(rho_tab), mae_tab)
   
   params[4] <- rho_tab[which.min(mse_tab)]

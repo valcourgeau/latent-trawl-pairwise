@@ -38,18 +38,20 @@ CompositeLikelihood <- function(data, parametrisation='standard'){
 
 CustomMarginalMLE <- function(data, parametrisation='standard'){
   init_guess <- as.numeric(evir::gpd(data, threshold = 0)$par.ests)
+  print(init_guess)
   fn_mle <- CustomLikelihood(data = data, parametrisation = parametrisation)
   
-  lower <- c(1e-02, 0.1)
+  lower <- c(1e-03, 0.1)
   if(parametrisation == 'std_trf'){
     lower <- c(-2, 0.1)
   }
-  res <- stats::optim(par = init_guess[2:1], fn_mle, method='L-BFGS-B', lower=lower, upper=c(2,20))$par
+  res <- stats::optim(par = init_guess[1:2], fn_mle, method='L-BFGS-B', lower=lower, upper=c(2,20))$par
   return(res)
 }
 
 CompositeMarginalMLE <- function(data, parametrisation='standard'){
   init_guess <- as.numeric(evir::gpd(data, threshold = 0)$par.ests)
+  print(init_guess)
   fn_mle <- CompositeLikelihood(data = data, parametrisation = parametrisation)
   
   lower <- c(1e-03, 0.1)
@@ -57,5 +59,5 @@ CompositeMarginalMLE <- function(data, parametrisation='standard'){
     lower <- c(-2, 0.1)
   }
   
-  return(stats::optim(par = init_guess[2:1], fn_mle, method='L-BFGS-B', lower=lower, upper=c(2,20))$par)
+  return(stats::optim(par = init_guess[1:2], fn_mle, method='L-BFGS-B', lower=lower, upper=c(2,20))$par)
 }
