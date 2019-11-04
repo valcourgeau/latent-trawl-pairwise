@@ -1,5 +1,6 @@
 
-EVTrawlFit <- function(data, depth, parametrisation='standard', type='exp', parallel=F, bounds='config', ...){
+EVTrawlFit <- function(data, depth, method, parametrisation='standard', type='exp', parallel=F, bounds='config', ...){
+  # method 'PL' or 'GMM'
   custom_mle_results <- CustomMarginalMLE(data, parametrisation)
   kappa <- GetKappa(data = data, params = custom_mle_results, parametrisation = 'standard')
   params <- c(custom_mle_results, kappa)
@@ -8,51 +9,55 @@ EVTrawlFit <- function(data, depth, parametrisation='standard', type='exp', para
     params <- ParametrisationTranslator(params, parametrisation = 'standard')
   }
   
-  trawl_pl_basic <- TrawlPL(data = data, depth = depth, parametrisation = parametrisation, type = type, parallel = parallel)
-  trawl_pl_restricted <- function(trawl_params){
-    return(trawl_pl_basic(c(params, trawl_params)))
-  }
-  
   trawl_cfg <- GetTrawlParamsConfig(type)
   
   # rdm start
   #TODO add parallel L-BFGS-B
-  if(bounds == 'config'){
-    trawl_res <- stats::optim(fn = trawl_pl_restricted,
-                              par = vapply(1:trawl_cfg$n_params, function(i){
-                                runif(n = 1,
-                                      min = trawl_cfg$lower[i],
-                                      max = trawl_cfg$upper[i])
-                              }, 1.),
-                              lower = trawl_cfg$lower,
-                              upper = trawl_cfg$upper,
-                              method = 'L-BFGS-B',
-                              control = list(trace=3))
+  if(method == 'PL'){
+    trawl_pl_basic <- TrawlPL(data = data, depth = depth, parametrisation = parametrisation, type = type, parallel = parallel)
+    trawl_pl_restricted <- function(trawl_params){
+      return(trawl_pl_basic(c(params, trawl_params)))
+    }
+    if(bounds == 'config'){
+      trawl_res <- stats::optim(fn = trawl_pl_restricted,
+                                par = vapply(1:trawl_cfg$n_params, function(i){
+                                  runif(n = 1,
+                                        min = trawl_cfg$lower[i],
+                                        max = trawl_cfg$upper[i])
+                                }, 1.),
+                                lower = trawl_cfg$lower,
+                                upper = trawl_cfg$upper,
+                                method = 'L-BFGS-B',
+                                control = list(trace=3))
+    }else{
+      cat('trawl_p', trawl_p, '\n')
+      trawl_res <- stats::optim(fn = trawl_pl_restricted,
+                                par = vapply(1:trawl_cfg$n_params, function(i){
+                                  runif(n = 1,
+                                        min = trawl_cfg$lower[i],
+                                        max = trawl_cfg$upper[i])
+                                }, 1.),
+                                lower = trawl_p*0.8,
+                                upper = trawl_p*1.2,
+                                method = 'L-BFGS-B',
+                                control = list(trace=3))
+    }
+    return(c(params, trawl_res$par))
   }else{
-    trawl_p <- DupuisSimplified(data_u = data, ...)[4:(4+trawl_cfg$n_params-1)]
-    cat('trawl_p', trawl_p, '\n')
-    trawl_res <- stats::optim(fn = trawl_pl_restricted,
-                              par = vapply(1:trawl_cfg$n_params, function(i){
-                                runif(n = 1,
-                                      min = trawl_cfg$lower[i],
-                                      max = trawl_cfg$upper[i])
-                              }, 1.),
-                              lower = trawl_p*0.8,
-                              upper = trawl_p*1.2,
-                              method = 'L-BFGS-B',
-                              control = list(trace=3))
+    if(method == 'GMM'){
+      trawl_p <- DupuisSimplified(data_u = data, ...)[1:(4+trawl_cfg$n_params-1)]
+      return(trawl_p)
+    }
   }
-
-  
-  return(c(params, trawl_res$par))
 }
 
-SubSampleFit <- function(data, depth, sub_length, trials, file_csv, parametrisation='standard', type='exp', parallel=F, seed=42, subfolder='simulation/results/'){
+
+SubSampleFit <- function(data, depth, sub_length, method, trials, file_csv, parametrisation='standard', type='exp', parallel=F, seed=42, subfolder='simulation/results/', ...){
+  # method 'PL' or 'GMM'
   n <- length(data)
   set.seed(seed)
   start_points <- sample(1:(n-sub_length), size = trials, replace = F)
   results <- matrix(0, nrow=trials, ncol=3+GetTrawlParamsConfig(type)$n_params)
-  
   
   if(parallel){
     cores <- parallel::detectCores(logical = TRUE)
@@ -91,8 +96,10 @@ SubSampleFit <- function(data, depth, sub_length, trials, file_csv, parametrisat
                           EVTrawlFit(data = data[start_pt:(start_pt+sub_length)],
                                      depth = depth,
                                      parametrisation = parametrisation,
+                                     method = method,
                                      type = type,
-                                     parallel = F)
+                                     parallel = F,
+                                     ...)
                         }, chunk.size = 5)
     print(Sys.time() - sub_sample_time)
     parallel::stopCluster(cl)
@@ -105,7 +112,9 @@ SubSampleFit <- function(data, depth, sub_length, trials, file_csv, parametrisat
                                     depth = depth,
                                     parametrisation = parametrisation,
                                     type = type,
-                                    parallel = F)
+                                    method = method,
+                                    parallel = F,
+                                    ...)
                        },
                        FUN.VALUE = rep(0, ncol(results))))
     print(Sys.time() - sub_sample_time)
