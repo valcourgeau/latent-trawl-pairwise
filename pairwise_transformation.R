@@ -1,4 +1,4 @@
-TransformationMap <- function(x, params_std, params_trf, target_alpha=3){
+TransformationMap <- function(x, params_std, params_trf){
   # from original to trf
   # params_trf <- ParametrisationTranslator(params = params,
   #                                         parametrisation = parametrisation,

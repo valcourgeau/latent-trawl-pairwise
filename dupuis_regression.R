@@ -134,24 +134,39 @@ acf_trawl_num_approx_inv <- function(h, alpha, beta, kappa, rho, delta=0.5, type
 
 DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.3, 3), cl=NULL){
   params <- rep(0, 6)
-  custom_mle_results <- CustomMarginalMLE(data = data_u)
+  custom_mle_results <- CustomMarginalMLE(data = data_u, 'std_trf')
   kappa <- GetKappa(data = data_u, params = custom_mle_results, parametrisation = 'standard')
   params[1:3] <- c(custom_mle_results, kappa)
+  
+  
+  if(params[1] < 0.0){
+    new_param_1 <- 0.5
+    new_param_2 <- (1.0 + kappa) * abs(new_param_1)
+    
+    data_u <- TransformationMap(x = data_u,
+                                params_std = c(params[1], params[2]),
+                                params_trf = c(new_param_1, new_param_2))
+    params_original <- params
+    params[1] <- new_param_1
+    params[2] <- new_param_2
+  }else{
+    params_original <- params
+  }
+  
   params[5:6] <- ParametrisationTranslator(
     params = params,
     parametrisation = 'standard',
     target = 'noven')[1:2]
-  print(params)
-  
-  Marginal
-  
-  
+ 
   depth <- acf_depth
   kk <- acf(as.numeric(data_u>0), lag.max = depth-1, plot=F)
   
   alpha_tmp <- params[5]
   beta_tmp <- params[6]
   kappa_tmp <- params[3]
+  print(params)
+  print('BETA TMP')
+  print(beta_tmp)
   
   mae_tab <- rep(0, n_trials)
   mse_tab <- rep(0, n_trials)
@@ -177,8 +192,8 @@ DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.3, 
                   rho = rho_iter, delta = 0.5, end_seq = 50)}, 1)
     }
     
-    # plot(kk$acf)
-    plot(acf_vals, col='red')
+    plot(kk$acf)
+    lines(acf_vals, col='red')
     mae_tab[index] <- sum(abs(kk$acf - acf_vals)) 
     mse_tab[index] <- sum(((kk$acf - acf_vals)^2))
     index <- index + 1
@@ -186,8 +201,14 @@ DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.3, 
   
   plot(rho_tab, mse_tab)
   points(exp(rho_tab), mae_tab)
-  
   params[4] <- rho_tab[which.min(mse_tab)]
-  names(params) <- c('xi', 'sigma', 'kappa', 'rho', 'alpha', 'beta')
-  return(params)
+  
+  if(params_original[1] >= 0){
+    names(params) <- c('xi', 'sigma', 'kappa', 'rho', 'alpha', 'beta')
+    return(params)
+  }else{
+    params <- c(params_original[1:3], params[4], params_original[5:6])
+  }
+  
+ 
 }
