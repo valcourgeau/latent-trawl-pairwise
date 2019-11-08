@@ -1,5 +1,6 @@
 
-EVTrawlFit <- function(data, depth, method, parametrisation='standard', type='exp', parallel=F, bounds='config', ...){
+EVTrawlFit <- function(data, depth, method, parametrisation='standard', type='exp',
+                       parallel=F, bounds='config', ...){
   # method 'PL' or 'GMM'
   custom_mle_results <- CustomMarginalMLE(data, parametrisation)
   kappa <- GetKappa(data = data, params = custom_mle_results, parametrisation = 'standard')
@@ -14,7 +15,8 @@ EVTrawlFit <- function(data, depth, method, parametrisation='standard', type='ex
   # rdm start
   #TODO add parallel L-BFGS-B
   if(method == 'PL'){
-    trawl_pl_basic <- TrawlPL(data = data, depth = depth, parametrisation = parametrisation, type = type, parallel = parallel)
+    trawl_pl_basic <- TrawlPL(data = data, depth = depth, parametrisation = parametrisation,
+                              type = type, parallel = parallel)
     trawl_pl_restricted <- function(trawl_params){
       return(trawl_pl_basic(c(params, trawl_params)))
     }
@@ -111,6 +113,7 @@ SubSampleFit <- function(data, depth, sub_length, method, trials, file_csv, para
     parallel::stopCluster(cl)
     results <- matrix(unlist(results), ncol=length(results[[1]]), byrow = T)
   }else{
+    print('No parallel trials but parallel PL.')
     sub_sample_time <- Sys.time()
     results<- t(vapply(start_points,
                        FUN = function(start_pt){
@@ -119,7 +122,7 @@ SubSampleFit <- function(data, depth, sub_length, method, trials, file_csv, para
                                     parametrisation = parametrisation,
                                     type = type,
                                     method = method,
-                                    parallel = F,
+                                    parallel = T,
                                     ...)
                        },
                        FUN.VALUE = rep(0, ncol(results))))

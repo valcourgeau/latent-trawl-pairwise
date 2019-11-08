@@ -56,15 +56,15 @@ TransformationJacobian <- function(params_std, params_trf, target_alpha=3){
     return(final_val)
   }
 }
-
-set.seed(42)
-gpd_sample_1 <- eva::rgpd(n = 10000, loc = 0.0, scale = (1+10)/3, shape = 1/3.0)
-plot(sort(gpd_sample_1), sort(TransformationJacobian(c(3.0, 1, 10), c(3.0, 1, 10))(gpd_sample_1)))
-
-set.seed(42)
-gpd_sample <- eva::rgpd(n = 10000, loc = 0.0, scale = 5, shape = -0.2)
-tmp <- TransformationMap(TransformationMapInverse(gpd_sample, params = c(-0.2, 5, 3), parametrisation = 'standard'),
-                                                  , params = c(-0.2, 5, 3), parametrisation = 'standard')
-plot(sort(tmp), sort(gpd_sample))
-line(0:20, 0:20)
-eva::gpdFit(tmp, 0.0)
+# 
+# set.seed(42)
+# gpd_sample_1 <- eva::rgpd(n = 10000, loc = 0.0, scale = (1+10)/3, shape = 1/3.0)
+# plot(sort(gpd_sample_1), sort(TransformationJacobian(c(3.0, 1, 10), c(3.0, 1, 10))(gpd_sample_1)))
+# 
+# set.seed(42)
+# gpd_sample <- eva::rgpd(n = 10000, loc = 0.0, scale = 5, shape = -0.2)
+# tmp <- TransformationMap(TransformationMapInverse(gpd_sample, params = c(-0.2, 5, 3), parametrisation = 'standard'),
+#                                                   , params = c(-0.2, 5, 3), parametrisation = 'standard')
+# plot(sort(tmp), sort(gpd_sample))
+# line(0:20, 0:20)
+# eva::gpdFit(tmp, 0.0)

@@ -108,7 +108,10 @@ CaseSeparator <-  function(xs, alpha, beta, kappa, B1, B2, B3){
 
 PairPDFConstructor <- function(params_noven, type='exp'){
   # params is (alpha, beta, kappa, trawl_params)
-  c(B1_func, B2_func, B3_func) %<-% GetTrawlFunctions(type)
+  B_funcs <- GetTrawlFunctions(type)
+  B1_func <- B_funcs[[1]]
+  B2_func <- B_funcs[[2]]
+  B3_func <- B_funcs[[3]]
   alpha <- params_noven[1]
   beta <- params_noven[2]
   kappa <- params_noven[3]
@@ -222,7 +225,11 @@ PLConstructor <- function(depth, pair_likehood, parallel=TRUE, jacob_transform=N
 
 TrawlPLStandard <- function(params, depth, type='exp', parallel=TRUE){
   # param with (xi, sigma, kappa, trawl_params)
-  c(B1_func, B2_func, B3_func) %<-% GetTrawlFunctions(type)
+  B_funcs <- GetTrawlFunctions(type)
+  B1_func <- B_funcs[[1]]
+  B2_func <- B_funcs[[2]]
+  B3_func <- B_funcs[[3]]
+  
   # TODO add translator here
   params_tmp <- params
   params_tmp[1] <- 1.0/params[1]
@@ -237,8 +244,10 @@ TrawlPLStandard <- function(params, depth, type='exp', parallel=TRUE){
     }else{
       return(pair_likehood_f(data, h)*abs(params[1])^(3))
     }
-    
   }
+  
+  cat('TrawlPLStandard', parallel, '\n')
+  
   return(PLConstructor(depth = depth, pair_likehood = wrapper_with_jacobian, parallel=parallel))
 }
 
@@ -246,7 +255,11 @@ TrawlPLStandard <- function(params, depth, type='exp', parallel=TRUE){
 
 TrawlPLStandardTrf <- function(params, depth, type='exp', parallel=TRUE, target_alpha=3.0){
   # param with (xi, sigma, kappa, trawl_params)
-  c(B1_func, B2_func, B3_func) %<-% GetTrawlFunctions(type)
+  B_funcs <- GetTrawlFunctions(type)
+  B1_func <- B_funcs[[1]]
+  B2_func <- B_funcs[[2]]
+  B3_func <- B_funcs[[3]]
+  
   # TODO add translator here
   params_tmp <- params
   params_tmp[1] <- 1.0/params[1]
@@ -276,7 +289,10 @@ TrawlPLStandardTrf <- function(params, depth, type='exp', parallel=TRUE, target_
 
 TrawlPLNoven <- function(params, depth, type='exp', parallel=TRUE){
   # param with (xi, sigma, kappa, trawl_params)
-  c(B1_func, B2_func, B3_func) %<-% GetTrawlFunctions(type)
+  B_funcs <- GetTrawlFunctions(type)
+  B1_func <- B_funcs[[1]]
+  B2_func <- B_funcs[[2]]
+  B3_func <- B_funcs[[3]]
   params_tmp <- params
   
   pair_likehood_f <- PairPDFConstructor(params_noven = params_tmp, type = type)
@@ -288,7 +304,8 @@ TrawlPLNoven <- function(params, depth, type='exp', parallel=TRUE){
 }
 
   
-TrawlPLFunctional <- function(params, depth, type='exp', parametrisation='standard', parallel=TRUE, target_alpha=3.0){
+TrawlPLFunctional <- function(params, depth, type='exp', parametrisation='standard',
+                              parallel=TRUE, target_alpha=3.0){
   PLOperator <- switch(parametrisation,
     'standard' = TrawlPLStandard(params = params, depth = depth, type = type, parallel = parallel),
     'std_trf' = TrawlPLStandardTrf(params = params, depth = depth, type = type, parallel = parallel, target_alpha = target_alpha),
@@ -310,66 +327,6 @@ TrawlPL <- function(data, depth, type='exp', parametrisation='standard', paralle
     return(pl_functional(data))
   })
 }
-
-# 
-# noven_example_params <- c(6.33,20.12,12.18, 0.27)
-# ok <- TrawlPLFunctional(params = noven_example_params, depth = 4, parametrisation='noven')
-# 
-# #set up as function of params
-# set.seed(42)
-# rdm_data <- pmax(rnorm(10000), 0.0)
-# ok(rdm_data)/length(rdm_data)
-# 
-# library(profvis)
-# profvis({
-#   ok <- TrawlPLFunctional(params = noven_example_params, depth = 4, parametrisation='noven')
-#   #set up as function of params
-#   set.seed(42)
-#   rdm_data <- pmax(rnorm(15000), 0.0)
-#   ok(rdm_data)/length(rdm_data)
-#   
-#   ok <- TrawlPLFunctional(params = noven_example_params, depth = 4, parametrisation='noven', parallel = F)
-#   #set up as function of params
-#   set.seed(42)
-#   rdm_data <- pmax(rnorm(15000), 0.0)
-#   ok(rdm_data)/length(rdm_data)
-# })
-# profvis({
-#   test_params <- noven_example_params
-#   #set up as function of params
-#   set.seed(42)
-#   rdm_data <- pmax(rnorm(1000), 0.0)
-#   dac <- TrawlPL(data = rdm_data, depth = 4, parametrisation='noven')
-# 
-#   print(dac(test_params)/length(rdm_data))
-# })
-# 
-# profvis({
-#   test_params <- noven_example_params
-#   #set up as function of params
-#   set.seed(42)
-#   rdm_data <- pmax(rnorm(1000), 1.96) - 1.96
-#   dac <- TrawlPL(data = rdm_data, depth = 4, parametrisation='noven')
-#   dac(test_params)
-# })
-
-# optim(dac, par = test_params, method = 'L-BFGS-B', lower=c(0.1, 5, 1, 1e-1), upper=c(8, 30, 20, 1), control = list(trace=3))
-
-# test_params <- noven_example_params
-# #set up as function of params
-# set.seed(42)
-# rdm_data <- pmax(rnorm(10000), 1.96) - 1.96
-# pollution_data <- read.csv('data/clean_pollution_data.csv')
-# dac <- TrawlPL(data = pollution_data$NO[1:1000], depth = 5, parametrisation='standard')
-# test_params <- noven_example_params
-# test_params[1] <- 1/test_params[1]
-# test_params[2] <- (noven_example_params[2] + noven_example_params[3])/noven_example_params[1]
-# dac(test_params)
-# 
-# optim(dac, par = test_params, method = 'L-BFGS-B', lower=c(0.001, 1, 1, 1e-1), upper=c(3, 10, 20, 1), control = list(trace=3))
-# 
-# 
-
 
 
 

@@ -22,16 +22,16 @@ acf_trawl <- function(h, alpha, beta, rho, kappa, delta = 0.1, end_seq = 50, typ
                     return(c(tmp1, tmp2))
                   },
                   FUN.VALUE = rep(0, 2))
-    return(apply(sum_over_y, MARGIN = 1, sum))},
-    FUN.VALUE = rep(0, 2))
+    return(c(apply(sum_over_y, MARGIN = 1, sum), (1+x/beta)^{-alpha}))},
+    FUN.VALUE = rep(0, 3))
   
   final_sum <- apply(sum_over_x, MARGIN = 1, sum)
-  final_sum <- final_sum * delta^2
+  final_sum <- final_sum * delta
+  final_sum[1:2] <- final_sum[1:2] * delta
   
   res <- final_sum[1]
   res_0 <- final_sum[2]
-  first_mom_sq <-  ((1+kappa/beta)^{-alpha}*(beta+kappa)/(alpha - 1))^2
-
+  first_mom_sq <- final_sum[3]^2
   if(cov){
     return(res-first_mom_sq)
   }else{
@@ -127,12 +127,11 @@ acf_trawl_num_approx_inv <- function(h, alpha, beta, kappa, rho, delta=0.5, type
               rho = rho, delta = delta, type = type, cov = cov)}, 1)}
 
 
-DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.1, 1.5), cl=NULL){
+DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.1, 1.5), cl=NULL, plot.it=F){
   params <- rep(0, 6)
   custom_mle_results <- CustomMarginalMLE(data = data_u, 'std_trf')
   kappa <- GetKappa(data = data_u, params = custom_mle_results, parametrisation = 'standard')
   params[1:3] <- c(custom_mle_results, kappa)
-  
   
   if(params[1] < 0.0){
     new_param_1 <- 0.5
@@ -187,16 +186,43 @@ DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.1, 
     index <- index + 1
   }
   
-  # plot(rho_tab, mse_tab)
-  # points(rho_tab, mae_tab, col='red')
+
+  
   params[4] <- rho_tab[which.min(mse_tab)]
   
-  if(params_original[1] >= 0){
-    names(params) <- c('xi', 'sigma', 'kappa', 'rho', 'alpha', 'beta')
-    return(params)
-  }else{
+  if(params_original[1] < 0){
     params <- c(params_original[1:3], params[4], params_original[5:6])
   }
-  
- 
+  names(params) <- c('xi', 'sigma', 'kappa', 'rho', 'alpha', 'beta')
+  if(plot.it){
+    max.ys <- max(max(mse_tab), max(mae_tab))
+    plot(rho_tab, mse_tab,
+         pch = 3,
+         cex=1.2,
+         lwd=2,
+         ylim=c(0, max.ys),
+         col='darkgreen',
+         type='b',
+         xlab = expression(rho),
+         ylab='Error',
+         cex.axis=1.4,
+         cex.lab=1.5,
+         bty='n')
+    points(rho_tab, mae_tab,
+           col='orange',
+           pch=4,
+           lwd=2,
+           cex=1.2,
+           type='b')
+    abline(v=mult_fac[1], lty=2, lwd=2, col='darkblue')
+    abline(v=params['rho'], lty=2, lwd=2, col='dodgerblue3')
+    
+    legend(0.45, max.ys,
+           legend=c("MSE", "MAE", expression(paste(rho, 'PL')), expression(paste(rho, 'GMM'))),
+           col=c("darkgreen", "orange", 'darkblue', "dodgerblue3"),
+           pch = c(3:4, NA, NA), lty=2, cex=1.3, lwd=2,
+           bty='n')
+    
+  }
+  return(params)
 }

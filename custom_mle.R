@@ -16,8 +16,9 @@ CustomLikelihood <- function(data, parametrisation='standard'){
     # p_non_zero <- 1-(1+kap/(par[2]/abs(par[1])-kap))^{-1/par[1]}
     like <- eva::dgpd(data_for_mle[data_for_mle>0.0], scale = par[2], shape=par[1],
                       loc=0, log.d = F) * p_non_zero
-    
     log.like <- sum(log(like)) + length(data_for_mle == 0.0) * log(1-p_non_zero)
+    log.like <- min(log.like, 1e9)
+    log.like <- max(log.like, -1e9)
     return(-log.like)
   })
 }
@@ -37,7 +38,7 @@ CompositeLikelihood <- function(data, parametrisation='standard'){
 }
 
 CustomMarginalMLE <- function(data, parametrisation='standard'){
-  init_guess <- as.numeric(evir::gpd(data, threshold = 0)$par.ests)
+  init_guess <- as.numeric(evir::gpd(data[1:min(20000,length(data))], threshold = 0)$par.ests)
   print(init_guess)
   fn_mle <- CustomLikelihood(data = data, parametrisation = parametrisation)
   
