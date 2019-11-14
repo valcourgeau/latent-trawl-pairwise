@@ -196,32 +196,33 @@ DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.1, 
   names(params) <- c('xi', 'sigma', 'kappa', 'rho', 'alpha', 'beta')
   if(plot.it){
     max.ys <- max(max(mse_tab), max(mae_tab))
-    plot(rho_tab, mse_tab,
+    plot(log(rho_tab), mse_tab,
          pch = 3,
          cex=1.2,
          lwd=2,
          ylim=c(0, max.ys),
          col='darkgreen',
          type='b',
-         xlab = expression(rho),
+         xlab = expression(paste('log(', rho, ')', sep='')),
          ylab='Error',
          cex.axis=1.4,
          cex.lab=1.5,
          bty='n')
-    points(rho_tab, mae_tab,
+    points(log(rho_tab), mae_tab,
            col='orange',
            pch=4,
            lwd=2,
            cex=1.2,
            type='b')
-    abline(v=mult_fac[1], lty=2, lwd=2, col='darkblue')
-    abline(v=params['rho'], lty=2, lwd=2, col='dodgerblue3')
+
+    abline(v=log(mult_fac[1]), lty=2, lwd=2, col='darkblue')
+    abline(v=log(params['rho']), lty=4, lwd=2, col='dodgerblue3')
     
-    legend(0.45, max.ys,
-           legend=c("MSE", "MAE", expression(paste(rho, 'PL')), expression(paste(rho, 'GMM'))),
+    legend(log(0.01), max.ys+0.1,
+           legend=c("MSE", "MAE", expression(paste(rho, ' PL')), expression(paste(rho, ' GMM '))),
            col=c("darkgreen", "orange", 'darkblue', "dodgerblue3"),
-           pch = c(3:4, NA, NA), lty=2, cex=1.3, lwd=2,
-           bty='n')
+           pch = c(3:4, NA, NA), lty=c(2, 2, 2, 4), cex=0.9, lwd=2)
+           # bty='n')
     
   }
   return(params)

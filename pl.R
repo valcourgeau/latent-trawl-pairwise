@@ -18,6 +18,7 @@ for(i in 1:length(colnames(pollution_data))){
     parallel = F,
     file_csv = paste(colnames(pollution_data)[i], '_full_1_PL.csv', sep=''),
     subfolder = 'analysis/pollution/results/',
+    bounds='ow',
     n_trials=20,
     seed=41,
     acf_depth=20

@@ -32,7 +32,7 @@ EVTrawlFit <- function(data, depth, method, parametrisation='standard', type='ex
                                 method = 'L-BFGS-B',
                                 control = list(trace=3))
     }else{
-      cat('trawl_p', trawl_p, '\n')
+      trawl_p <- DupuisSimplified(data_u = data, ...)[1:(4+trawl_cfg$n_params-1)]
       trawl_res <- stats::optim(fn = trawl_pl_restricted,
                                 par = vapply(1:trawl_cfg$n_params, function(i){
                                   runif(n = 1,
@@ -48,7 +48,7 @@ EVTrawlFit <- function(data, depth, method, parametrisation='standard', type='ex
   }else{
     if(method == 'GMM'){
       trawl_p <- DupuisSimplified(data_u = data, ...)[1:(4+trawl_cfg$n_params-1)]
-      return(trawl_p)
+      return(c(params, trawl_p))
     }
   }
 }

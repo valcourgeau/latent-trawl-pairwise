@@ -5,7 +5,7 @@ pollution_data <- read.csv("data/clean_pollution_data.csv")
 pollution_data <- pollution_data[,-1]
 head(pollution_data)
 
-max_length <- 50000
+max_length <- 100000
 marginal_fit <- lapply(1:ncol(pollution_data), 
        function(i){
          SubSampleFit(
@@ -17,8 +17,7 @@ marginal_fit <- lapply(1:ncol(pollution_data),
            parallel = F,
            file_csv = paste(colnames(pollution_data)[i], '_full_1.csv', sep=''),
            subfolder = 'analysis/pollution/results/',
-           
-           n_trials=20,
+           n_trials=50,
            seed=41,
            acf_depth=20
          )
