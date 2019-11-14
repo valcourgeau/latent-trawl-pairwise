@@ -12,14 +12,15 @@ marginal_fit <- lapply(1:ncol(pollution_data),
            data=pollution_data[1:max_length,i],
            depth = 5,
            sub_length = max_length-1,
-           method = 'GMM',
+           method = 'PL',
            trials = 1,
            parallel = F,
-           file_csv = paste(colnames(pollution_data)[i], '_full_1.csv', sep=''),
+           file_csv = paste(colnames(pollution_data)[i], '_full_pl.csv', sep=''),
            subfolder = 'analysis/pollution/results/',
            n_trials=50,
            seed=41,
-           acf_depth=20
+           acf_depth=20,
+           bounds='ow'
          )
        }
 )

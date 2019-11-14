@@ -83,6 +83,7 @@ SubSampleFit <- function(data, depth, sub_length, method, trials, file_csv, para
                         'StandTrawlTerms',
                         'EVTrawlFit',
                         'CustomMarginalMLE',
+                        'ExponentialTrawl',
                         'GetKappa',
                         'TrawlPL',
                         'GetTrawlParamsConfig',
