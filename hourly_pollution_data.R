@@ -24,6 +24,7 @@ jittered_clean_data <-  apply(clean_data, MARGIN = 2, FUN =  function(x){
   return(x + rnorm(n = length(x), mean = 0, sd = 0.1 * sd(x)))
 })
 std_clean_data <- apply(jittered_clean_data, MARGIN = 2, FUN = function(x){x/sd(x)})
+write.csv(std_clean_data, file = 'data/non_gpd_clean_data.csv')
 
 # taking exceedances with 95% quantile
 final_clean_data <- apply(std_clean_data, MARGIN = 2, FUN = function(x){return(pmax(x-quantile(x, 0.95), 0.0))})
