@@ -30,7 +30,7 @@ for(i in 1:length(colnames(pollution_data))){
   
   pl_results <- read.csv(paste('analysis/pollution/results/',
                                colnames(pollution_data)[i],
-                         '_full_1_PL.csv', sep=''))
+                         '_full_pl.csv', sep=''))
   DupuisSimplified(
     data_u = plot_data,
     n_trials = 30,
@@ -67,7 +67,7 @@ for(i in 1:length(colnames(pollution_data))){
          bty='n')
   
   hist(plot_data[plot_data>0], breaks = 50, probability = T,
-       xlab = expression(Value),
+       xlab = paste(colnames(pollution_data)[i],' Value'),
        ylab='Density',
        cex.axis=1.5,
        cex.lab=1.5,

@@ -219,7 +219,7 @@ DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.1, 
     abline(v=log(params['rho']), lty=4, lwd=2, col='dodgerblue3')
     
     legend(log(0.01), max.ys+0.1,
-           legend=c("MSE", "MAE", expression(paste(rho, ' PL')), expression(paste(rho, ' GMM '))),
+           legend=c("MSE", "MAE", expression(paste(rho, ' PL')), expression(paste(rho, ' GMM  '))),
            col=c("darkgreen", "orange", 'darkblue', "dodgerblue3"),
            pch = c(3:4, NA, NA), lty=c(2, 2, 2, 4), cex=0.9, lwd=2)
            # bty='n')
