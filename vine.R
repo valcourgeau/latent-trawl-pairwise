@@ -1,6 +1,7 @@
 # devtools::install_github("vinecopulib/rvinecopulib")
 library(rvinecopulib)
 
+
 pollution_data <- read.csv("data/clean_pollution_data.csv")
 pollution_data <- pollution_data[,-1]
 origin_pollution_data <- read.csv("data/non_gpd_clean_data.csv")
