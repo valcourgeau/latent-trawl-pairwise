@@ -1,7 +1,6 @@
-# devtools::install_github("vinecopulib/rvinecopulib")
+devtools::install_github("vinecopulib/rvinecopulib")
 library(rvinecopulib)
-
-
+library(ggraph)
 pollution_data <- read.csv("data/clean_pollution_data.csv")
 pollution_data <- pollution_data[,-1]
 origin_pollution_data <- read.csv("data/non_gpd_clean_data.csv")
@@ -12,10 +11,22 @@ pollution_gmm <- pollution_gmm[(0:(nrow(pollution_gmm)/4+1)) * 3 + 1,]
 row.names(pollution_gmm) <- pollution_gmm[,1]
 pollution_gmm <- pollution_gmm[,-1]
 
-unif_pollution_data <- UniformDataFromGPD(
+unif_pollution_data <- UniformFromGPDForMatrix(
   dataset_origin = origin_pollution_data,
   dataset = pollution_data,
   params = pollution_gmm)
+
+vine_config <- list()
+vine_config[['family_set']] =  c("clayton", "gumbel", "indep")
+vine_config[['trunc_lvl']] = NA
+vine_config[['selcrit']] = 'mbicv'
+vine_config[['core']] = parallel::detectCores()-1
+
+ExtremeVine(dataset = pollution_data,
+            uniform_dataset = unif_pollution_data,
+            col_number = 2,
+            horizon = 1,
+            vine_config = vine_config)
 
 full_vine_mbic <- rvinecopulib::vinecop(data = unif_pollution_data,
                                         family_set = c("clayton", "gumbel", "indep"),
@@ -23,7 +34,8 @@ full_vine_mbic <- rvinecopulib::vinecop(data = unif_pollution_data,
                                         selcrit='mbicv',
                                         core=parallel::detectCores()-1)
 print(full_vine_mbic)
-
+full_vine_mbic$structure$struct_array
+plot(full_vine_mbic)
 
 full_vine_bic <- rvinecopulib::vinecop(data = unif_pollution_data,
                                         family_set = c("clayton", "gumbel", "indep"),

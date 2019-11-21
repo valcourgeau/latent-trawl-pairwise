@@ -14,7 +14,7 @@ UniformsFromGPD <- function(data_origin, data, xi, sigma){
   return(data)
 }
 
-UniformDataFromGPD <- function(dataset_origin, dataset, params){
+UniformFromGPDForMatrix <- function(dataset_origin, dataset, params){
   # datasets are organised in cols
   # params in rows (xi, sigma)
   return(vapply(
@@ -27,4 +27,35 @@ UniformDataFromGPD <- function(dataset_origin, dataset, params){
     },
     rep(0, nrow(dataset_origin))
   ))
+}
+
+FilterExtremeIndex <- function(dataset, col_number, horizon){
+  n_elems <- nrow(dataset)
+  index_pick <- which(dataset[,col_number] > 0.0)
+  index_pick <- index_pick[which(index_pick <= n_elems-horizon)]
+  index_pick <- matrix(
+    rep(index_pick,each=ncol(dataset)),
+    ncol=ncol(dataset),
+    byrow=TRUE)
+  index_pick[,-col_number] <- index_pick[,-col_number]+horizon
+  
+  return(index_pick)
+}
+
+ExtremeVine <- function(dataset, uniform_dataset, col_number, horizon, vine_config){
+  index_pick <- FilterExtremeIndex(dataset, col_number, horizon)
+  xvine_data <- vapply(
+    1:ncol(dataset),
+    function(i){uniform_dataset[index_pick[,i],i]},
+    index_pick[,1])
+  
+  time_before <- Sys.time()
+  vine_fit <- rvinecopulib::vinecop(
+    data = xvine_data,
+    family_set = vine_config[['family_set']],
+    trunc_lvl = vine_config[['trunc_lvl']],
+    selcrit=vine_config[['selcrit']],
+    core=vine_config[['core']])
+  print(Sys.time() - time_before)
+  print(vine_fit)
 }

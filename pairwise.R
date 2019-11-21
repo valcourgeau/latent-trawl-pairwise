@@ -16,7 +16,7 @@ source('sim_study_utils.R')
 source('utils.R')
 source('dupuis_regression.R')
 source('pairwise_transformation.R')
-
+source('utils_vine_data.R')
 
 CheckAllNonpositive <- function(elems){
   all(elems <= 0.0)
