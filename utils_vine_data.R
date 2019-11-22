@@ -57,5 +57,23 @@ ExtremeVine <- function(dataset, uniform_dataset, col_number, horizon, vine_conf
     selcrit=vine_config[['selcrit']],
     core=vine_config[['core']])
   print(Sys.time() - time_before)
-  print(vine_fit)
+  return(vine_fit)
 }
+
+ExtremeVineCollection <- function(dataset, uniform_dataset, horizons, vine_config){
+  # Structure: colnames -> horizons
+  n_col <- ncol(dataset)
+  result_vines <- lapply(
+    1:n_col,
+    function(col_number){
+        return(lapply(
+          horizons,
+          function(horizon){return(ExtremeVine(dataset, uniform_dataset, col_number, horizon, vine_config))}
+        )
+      )
+    }
+  )
+  names(result_vines) <- colnames(dataset)
+  return(result_vines)
+}
+
