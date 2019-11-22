@@ -51,9 +51,8 @@ ExtremeVineData <- function(dataset, uniform_dataset, col_number, horizon){
   return(xvine_data)
 }
 
-ExtremeVine <- function(dataset, uniform_dataset, col_number, horizon, vine_config){
-  index_pick <- ExtremeVineData(dataset, uniform_dataset, col_number, horizon)
-  
+ExtremeVineFit <- function(dataset, uniform_dataset, col_number, horizon, vine_config){
+  xvine_data <- ExtremeVineData(dataset, uniform_dataset, col_number, horizon)
   time_before <- Sys.time()
   vine_fit <- rvinecopulib::vinecop(
     data = xvine_data,
@@ -73,7 +72,7 @@ ExtremeVineCollection <- function(dataset, uniform_dataset, horizons, vine_confi
     function(col_number){
         return(lapply(
           horizons,
-          function(horizon){return(ExtremeVine(dataset, uniform_dataset, col_number, horizon, vine_config))}
+          function(horizon){return(ExtremeVineFit(dataset, uniform_dataset, col_number, horizon, vine_config))}
         )
       )
     }
@@ -127,13 +126,37 @@ ExtremeVineMBIC <- function(vine_collection){
            }))
 }
 
+ExtremeVineExtractLink <- function(vine, level){
+  # in rows
+  vine_structure <- vine$structure
+  n_vars <- vine_structure$d
+  origin <- vine_structure$order[1:(n_vars-level)]
+  target <- rvinecopulib::as_rvine_matrix(vine_structure)[level,1:(n_vars-level)]
+  return(cbind(origin, target))
+}
+
+
+ExtremeVineExtractConditional <- function(vine, level){
+  # in rows
+  vine_structure <- vine$structure
+  n_vars <- vine_structure$d
+  origin <- vine_structure$order[1:(n_vars-level)]
+  if(level <= 1){return(numeric())}
+  else{
+    cond <- rvinecopulib::as_rvine_matrix(vine_structure)[1:(level-1),1:(n_vars-level)]
+    return(t(cond))
+  }
+}
+
 ExtremeVineConditionalSimulation <- function(vine, value, col_number){
   n_vars <- evc$O3[[1]]$structure$d
   
   sim_vals <- rep(0, n_vars)
   sim_vals[i] <- value
-  while(prod(sim_vals) == 0.0){
-      
-  }  
+  # while(prod(sim_vals) == 0.0){
+  #     
+  # }  
 }
+
+
 
