@@ -42,12 +42,17 @@ FilterExtremeIndex <- function(dataset, col_number, horizon){
   return(index_pick)
 }
 
-ExtremeVine <- function(dataset, uniform_dataset, col_number, horizon, vine_config){
+ExtremeVineData <- function(dataset, uniform_dataset, col_number, horizon){
   index_pick <- FilterExtremeIndex(dataset, col_number, horizon)
   xvine_data <- vapply(
     1:ncol(dataset),
     function(i){uniform_dataset[index_pick[,i],i]},
     index_pick[,1])
+  return(xvine_data)
+}
+
+ExtremeVine <- function(dataset, uniform_dataset, col_number, horizon, vine_config){
+  index_pick <- ExtremeVineData(dataset, uniform_dataset, col_number, horizon)
   
   time_before <- Sys.time()
   vine_fit <- rvinecopulib::vinecop(
@@ -75,5 +80,60 @@ ExtremeVineCollection <- function(dataset, uniform_dataset, horizons, vine_confi
   )
   names(result_vines) <- colnames(dataset)
   return(result_vines)
+}
+
+ExtremeVineSimulation <- function(vine_collection, n){
+  #vine_collection: vars -> horizon
+  return(
+    lapply(vine_collection,
+         FUN = function(vine_per_var){
+           lapply(vine_per_var,
+                  function(vine){
+                    rvinecopulib::rvinecop(n = n, vine=vine)
+                  })
+         }))
+}
+
+ExtremeVineAIC <- function(vine_collection){
+  return(
+    lapply(vine_collection,
+           FUN = function(vine_per_var){
+             lapply(vine_per_var,
+                    function(vine){
+                      return(2.0 * (vine$npars - vine$loglik))
+                    })
+           }))
+}
+
+ExtremeVineBIC <- function(vine_collection, n){
+  return(
+    lapply(vine_collection,
+           FUN = function(vine_per_var){
+             lapply(vine_per_var,
+                    function(vine){
+                      return(2.0 * (log(n)*vine$npars - vine$loglik))
+                    })
+           }))
+}
+
+ExtremeVineMBIC <- function(vine_collection){
+  return(
+    lapply(vine_collection,
+           FUN = function(vine_per_var){
+             lapply(vine_per_var,
+                    function(vine){
+                      return(rvinecopulib::mBICV(vine))
+                    })
+           }))
+}
+
+ExtremeVineConditionalSimulation <- function(vine, value, col_number){
+  n_vars <- evc$O3[[1]]$structure$d
+  
+  sim_vals <- rep(0, n_vars)
+  sim_vals[i] <- value
+  while(prod(sim_vals) == 0.0){
+      
+  }  
 }
 

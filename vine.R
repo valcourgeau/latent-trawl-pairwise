@@ -37,6 +37,10 @@ evc <- ExtremeVineCollection(
   vine_config = vine_config
 )
 
+evc[[1]]
+
+evc_sim <- ExtremeVineSimulation(evc, n = 100)
+
 
 full_vine_mbic <- rvinecopulib::vinecop(data = unif_pollution_data,
                                         family_set = c("clayton", "gumbel", "indep"),
