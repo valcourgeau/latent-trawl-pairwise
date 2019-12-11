@@ -175,7 +175,7 @@ ExtremeVineExtractConditional <- function(vine, level){
   }
 }
 
-ExtremeVineConditionalSimulation <- function(vine, col_number, value){
+ExtremeVineSingleCondSim <- function(vine, col_number, value){
   sim_vals <- rep(0, vine$structure$d)
   sim_vals[col_number] <- value
   random_start <- runif(vine$structure$d) # uncorrelated unif(0,1)
@@ -290,6 +290,15 @@ ExtremeVineConditionalSimulation <- function(vine, col_number, value){
   }
   
   return(sim_vals)
+}
+
+ExtremeVineConditionalSimulation <- function(vine, col_number, value, n, seed=42){
+  set.seed(42)
+  return(
+    t(
+      vapply(1:n, FUN = function(i){ExtremeVineSingleCondSim(vine, col_number, value)}, rep(0, vine_tmp$structure$d))
+      )
+    )
 }
 
 ExtremeVinePlacingConditional <- function(rdm_data, cond_data, cond_on){
