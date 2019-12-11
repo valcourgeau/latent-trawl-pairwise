@@ -135,6 +135,30 @@ ExtremeVineExtractLink <- function(vine, level){
   return(cbind(origin, target))
 }
 
+ExtremeVineExtractBicop <- function(vine, link){
+  #returns list with level, link number and bicop
+  assertthat::assert_that(!assertthat::are_equal(link[1], link[2]), msg=paste('Link nodes should be different. Received', link[1], link[2]))
+  vine_structure <- vine$structure
+  n_vars <- vine_structure$d
+  list_links <- lapply(1:n_vars, function(lvl){ExtremeVineExtractLink(vine, lvl)})
+  is_this_in_level <- lapply(list_links,
+                             function(list_lks){
+                               apply(list_lks, MARGIN = 1, function(lk){all(link %in% lk)})
+                              })
+  any_at_each_level <- vapply(is_this_in_level, any, T)
+  if(any(any_at_each_level)){
+    link_level <- which(any_at_each_level)
+    link_number <- which(is_this_in_level[[link_level]])
+    link_bicop <- vine$pair_copulas[[link_level]][[link_number]]
+  }else{
+    link_level <- NA
+    link_number <- NA
+    link_bicop <- NA
+  }
+  
+  return(list(level=link_level, number=link_number, bicop=link_bicop))
+}
+
 
 ExtremeVineExtractConditional <- function(vine, level){
   # in rows
@@ -144,18 +168,138 @@ ExtremeVineExtractConditional <- function(vine, level){
   if(level <= 1){return(numeric())}
   else{
     cond <- rvinecopulib::as_rvine_matrix(vine_structure)[1:(level-1),1:(n_vars-level)]
+    if(level == 2){
+      return(as.matrix(cond))
+    }
     return(t(cond))
   }
 }
 
-ExtremeVineConditionalSimulation <- function(vine, value, col_number){
-  n_vars <- evc$O3[[1]]$structure$d
+ExtremeVineConditionalSimulation <- function(vine, col_number, value){
+  sim_vals <- rep(0, vine$structure$d)
+  sim_vals[col_number] <- value
+  random_start <- runif(vine$structure$d) # uncorrelated unif(0,1)
   
-  sim_vals <- rep(0, n_vars)
-  sim_vals[i] <- value
-  # while(prod(sim_vals) == 0.0){
-  #     
-  # }  
+  for(level in 1:(vine$structure$trunc_lvl-1)){
+    already_simulated_vars <- which(sim_vals > 0.0)
+    
+    links <- ExtremeVineExtractLink(vine, level)
+    links_with_only_one <- apply(
+      links,
+      MARGIN = 1,
+      function(link){sum(as.numeric(already_simulated_vars %in% link))==1})
+    
+    which_to_choose <- which(links_with_only_one)
+    
+    links <- links[links_with_only_one,]
+    cond_vars <- NA
+    if(level > 1){
+      cond_vars <- ExtremeVineExtractConditional(vine, level = level)
+      is_link_usable_cond <- apply(cond_vars,
+                                   MARGIN = 1,
+                                   FUN = function(lk_cond_var){
+                                     all(lk_cond_var %in% already_simulated_vars)
+                                   })
+      cond_vars <- cond_vars[is_link_usable_cond,]
+      
+      if(is.null(dim(links))){
+        links <- links[is_link_usable_cond[links_with_only_one]]
+      }else{
+        links <- links[is_link_usable_cond[links_with_only_one],]
+      }
+      which_to_choose <- which_to_choose[is_link_usable_cond]
+    }
+    target_vars <- apply(
+      as.matrix(links),
+      MARGIN = 1,
+      function(link){!(link %in% already_simulated_vars)})
+    target_vars <- t(target_vars)
+    already_simed_vars <- links[!target_vars]
+    target_vars <- links[target_vars]
+    
+    if(is.null(dim(links))){
+      links <- matrix(links, ncol=2)
+    }
+    
+    if(all(vapply(which_to_choose, is.na, FUN.VALUE = NA))){break}
+    
+    tmp <- t(vapply(1:nrow(links),
+                    function(i){
+                      bicop_tmp <- vine$pair_copulas[[level]][[which_to_choose[i]]]
+                      bicop_data_with_cond <- ExtremeVinePlacingConditional(
+                        rdm_data = sim_vals[already_simed_vars[i]],
+                        cond_data = random_start[target_vars[i]],
+                        cond_on =  which(links[i,]==target_vars[i])) # first level of interaction, we use uniforms as per Bevacqua et al. (2017)
+                      val <- rvinecopulib::hbicop(u=bicop_data_with_cond,
+                                                  cond_var = which(links[i,]==target_vars[i]),
+                                                  bicop_tmp,
+                                                  inverse = F)
+                      
+                      # we know that cond_vars variables have been simulated
+                      if(level > 1){
+                        conditional_level <- level
+                        current_target <- target_vars[i]
+                        current_cond <- NA
+                        if(is.null(dim(cond_vars))){
+                          conditional_vals <- cond_vars
+                        }else{
+                          conditional_vals <- cond_vars[i,]
+                        }
+                        
+                        while(conditional_level > 1){
+                          more_than_one <- F
+                          for(cond_v in conditional_vals){
+                            if(!more_than_one){
+                              extracted_bicop <- ExtremeVineExtractBicop(
+                                vine, c(current_target, cond_v))
+                              current_cond <- cond_v
+                              # checking if the link does exist
+                              if(!is.na(extracted_bicop$level)){
+                                if(extracted_bicop$level+1 == conditional_level){
+                                  more_than_one <- TRUE
+                                  conditional_level <- extracted_bicop$level
+                                  
+                                  assertthat::assert_that(sim_vals[cond_v] > 0.0)
+                                  
+                                  val <- rvinecopulib::hbicop(u=c(val, sim_vals[cond_v]),
+                                                              cond_var = 2,
+                                                              extracted_bicop$bicop,
+                                                              inverse = F)
+                                }else{
+                                  # warning('extracted_bicop$level+1 != conditional_level')
+                                }
+                              }
+                            }
+                          }
+                          current_links <- ExtremeVineExtractLink(vine, conditional_level)
+                          conditional_vals <- ExtremeVineExtractConditional(vine, conditional_level)
+                          
+                          is_condi_link <- apply(current_links, 1,
+                                                 function(lk){all(c(current_target, current_cond) %in% lk)})
+                          if(is.null(dim(conditional_vals))){
+                            conditional_vals <- conditional_vals[is_condi_link]
+                          }else{
+                            conditional_vals <- conditional_vals[is_condi_link,]
+                          }
+                          
+                        }
+                      }
+                      return(c(target_vars[i], val))},
+                    c(1,2)))
+    sim_vals[tmp[,1]] <- tmp[,2]
+  }
+  
+  return(sim_vals)
+}
+
+ExtremeVinePlacingConditional <- function(rdm_data, cond_data, cond_on){
+  if(cond_on == 1){
+    return(c(cond_data, rdm_data))
+  }else if(cond_on == 2){
+    return(c(rdm_data, cond_data))
+  }else{
+    warning('cond_on should in c(1,2).')
+  }
 }
 
 
