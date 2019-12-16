@@ -38,30 +38,33 @@ vine_config[['show_trace']] = FALSE
 #                                         core=parallel::detectCores()-1)
 # print(full_vine_bic)
 
-evc <- ExtremeVineCollection(pollution_data, unif_pollution_data, horizons = c(1), vine_config = vine_config, rescaling = T)
-evc$O3[[1]]$quantile_values
+evc <- ExtremeVineCollection(pollution_data, unif_pollution_data, horizons = c(1, 72), vine_config = vine_config, rescaling = T)
+evc$O3[[1]]$quantiles
 
 
-col_number_tmp <- 1
-cond_value <- 0.96
-vine_tmp <- evc[[col_number_tmp]][[3]]$vine_fit
-vine_struc <- evc[[col_number_tmp]][[3]]$vine_fit$structure
+col_cond_on <- 3
+final_col <- ncol(pollution_data) + 1
+vine_tmp <- evc[[col_cond_on]][[1]]$vine_fit
+vine_struc <- evc[[col_cond_on]][[1]]$vine_fit$structure
 
-samples <- t(vapply(950:1000/1000, function(x){ apply(ExtremeVineConditionalSimulation(vine_tmp, col_number = col_number_tmp, value = x, n = 1), 2, mean)},
-                    rep(0, ncol(pollution_data))))
+samples <- t(vapply(1:100/100,
+                    function(x){
+                      apply(ExtremeVineConditionalSimulation(vine_tmp, col_number = final_col, value = x, n = 1), 2, mean)},
+                    rep(0, ncol(pollution_data)+1)))
 
-par(mai=c(0.9,0.6,0.4,0.1), mfrow=c(6,1))
-plot(950:1000/1000, samples[,col_number_tmp],
-     ylab=paste('Probability of', colnames(pollution_data)[col_number_tmp]),
-     xlab = paste(colnames(pollution_data)[col_number_tmp], ' quantiles'), main = 'Probability of extremes',
-     cex.lab=1.5, cex.axis=1.4)
-for(i in c(1:ncol(pollution_data))[-col_number_tmp]){
-  plot(950:1000/1000, samples[,i],
-       ylab=paste('Probability of', colnames(pollution_data)[i]),
-       xlab=paste(colnames(pollution_data)[col_number_tmp], ' quantiles'),
-       cex.lab=1.5, cex.axis=1.4)
-  abline(h = evc[[col_number_tmp]][[1]]$quantile_values[i], lty=2, lwd=2)
+par(mai=c(0.55,0.6,0.4,0.1), mfrow=c(7,1))
+plot(1:100/100, samples[,final_col],
+     ylab=paste('(Control)'),
+     xlab = paste(colnames(pollution_data)[col_cond_on], ' quantiles'), main = 'Quantiles as function of time t extreme',
+     cex.lab=1.5, cex.axis=1.7, cex.main = 1.8)
+for(i in c(1:ncol(pollution_data))){
+  plot(1:100/100, samples[,i],
+       ylab=paste('Quantiles', colnames(pollution_data)[i], 'at t+1'),
+       xlab=paste(colnames(pollution_data)[col_cond_on], ' quantiles at time t'),
+       cex.lab=1.5, cex.axis=1.7)
+  abline(h = evc[[col_cond_on]][[1]]$quantile_values[i], lty=2, lwd=2)
 }
 
+cor(unif_pollution_data)
 
 ExtremeVineExtractConditional(evc$O3[[1]], 4)

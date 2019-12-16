@@ -33,12 +33,15 @@ FilterExtremeIndex <- function(dataset, col_number, horizon){
   n_elems <- nrow(dataset)
   index_pick <- which(dataset[,col_number] > 0.0)
   index_pick <- index_pick[which(index_pick <= n_elems-horizon)]
+  index_origin <- index_pick
+  index_pick <- index_pick+horizon
   index_pick <- matrix(
     rep(index_pick,each=ncol(dataset)),
     ncol=ncol(dataset),
     byrow=TRUE)
-  index_pick[,-col_number] <- index_pick[,-col_number]+horizon
   
+ 
+  index_pick <- cbind(index_pick, index_origin)
   return(index_pick)
 }
 
@@ -47,10 +50,17 @@ ExtremeVineData <- function(dataset, uniform_dataset, col_number, horizon, resca
   assertthat::are_equal(ncol(dataset), ncol(uniform_dataset))
   
   index_pick <- FilterExtremeIndex(dataset, col_number, horizon)
+  # t + horizon data
   xvine_data <- vapply(
     1:ncol(dataset),
     function(i){uniform_dataset[index_pick[,i],i]},
     index_pick[,1])
+  
+  # adding origin (at time t) data
+  xvine_data <- cbind(
+    xvine_data,
+    uniform_dataset[index_pick[,ncol(dataset)+1],col_number]
+  )
   
   if(rescaling){
     xvine_data <- apply(xvine_data, MARGIN = 2,
@@ -62,6 +72,7 @@ ExtremeVineData <- function(dataset, uniform_dataset, col_number, horizon, resca
     function(i){dataset[index_pick[,i],i]},
     index_pick[,1])
   xvne_proba_zero <- 1-apply(extreme_data > 0, 2, mean)
+  
   quantiles <- xvne_proba_zero
   quantile_values <- vapply(1:ncol(uniform_dataset),
                             function(i){quantile(xvine_data[,i], quantiles[i])}, 1.0)
@@ -70,7 +81,7 @@ ExtremeVineData <- function(dataset, uniform_dataset, col_number, horizon, resca
 
 ExtremeVineFit <- function(dataset, uniform_dataset, col_number, horizon, vine_config, rescaling=F){
   xvine_data <- ExtremeVineData(dataset, uniform_dataset, col_number, horizon, rescaling)
-  
+  print(head(xvine_data$xvine_data))
   time_before <- Sys.time()
   cat('Starting fit on column', col_number, '\n')
   vine_fit <- rvinecopulib::vinecop(
@@ -328,6 +339,24 @@ ExtremeVineConditionalSimulation <- function(vine, col_number, value, n, seed=42
       )
     )
 }
+
+ExtremeVineConditionalPredict <- function(vine, quantile_values, col_number, values, n, seed=42){
+  n_vars <- vine$structure$d
+  predict_vals <-  vapply(
+    1:length(values), 
+    function(i){ExtremeVineConditionalSimulation(vine, col_number, value = values[i], n = n, seed = seed) %>% as.matrix},
+    matrix(0, ncol = n_vars, nrow=n))
+  results <- list(
+    mean_pred =  apply(predict_vals, c(2,3), mean),
+    sd_pred =  apply(predict_vals, c(2,3), sd),
+    quantile_values = quantile_values
+  )
+  
+  
+ return(results)
+}
+
+
 
 ExtremeVinePlacingConditional <- function(rdm_data, cond_data, cond_on){
   if(cond_on == 1){
