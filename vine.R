@@ -47,6 +47,7 @@ col_cond_on <- 3
 final_col <- ncol(pollution_data) + 1
 vine_tmp <- evc[[col_cond_on]][[1]]$vine_fit
 vine_struc <- evc[[col_cond_on]][[1]]$vine_fit$structure
+vine_quantiles <- evc[[col_cond_on]][[1]]$quantiles
 
 # col_number is the column on which we condition on.
 # Usually, it is implicitly set to be the last column
@@ -68,9 +69,29 @@ for(i in c(1:ncol(pollution_data))){
        ylab=paste('Quantiles', colnames(pollution_data)[i], 'at t+1'),
        xlab=paste(colnames(pollution_data)[col_cond_on], ' quantiles at time t'),
        cex.lab=1.5, cex.axis=1.7)
-  abline(h = evc[[col_cond_on]][[1]]$quantile_values[i], lty=2, lwd=2)
+  abline(h = evc[[col_cond_on]][[1]]$quantiles[i], lty=2, lwd=2)
+  abline(v = evc[[col_cond_on]][[1]]$quantiles[col_cond_on], lty=3, lwd=2)
 }
 
 cor(unif_pollution_data)
 
 ExtremeVineExtractConditional(evc$O3[[1]], 4)
+
+# Predicting?
+ExtremeVineConditionalPredict(
+  vine = vine_tmp,
+  quantile_values = vine_quantiles,
+  col_number = final_col,
+  values = seq(from=vine_quantiles[col_cond_on], to=0.99, length.out = 5),
+  n = 1000
+)
+
+ExtremeVineConditionalIndicatorPredict(
+  vine = vine_tmp,
+  quantile_values = vine_quantiles,
+  col_number = final_col,
+  values = seq(from=vine_quantiles[col_cond_on], to=0.99, length.out = 5),
+  n = 1000
+)
+
+

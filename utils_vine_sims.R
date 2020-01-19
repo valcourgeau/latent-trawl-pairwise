@@ -1,3 +1,13 @@
+ExtremeVinePlacingConditional <- function(rdm_data, cond_data, cond_on){
+  if(cond_on == 1){
+    return(c(cond_data, rdm_data))
+  }else if(cond_on == 2){
+    return(c(rdm_data, cond_data))
+  }else{
+    warning('cond_on should in c(1,2).')
+  }
+}
+
 # handle when one computation has to be handle before the other
 ExtremeVineCondSimSingle <- function(vine, col_number, value){
   sim_vals <- rep(0, vine$structure$d)
@@ -139,23 +149,42 @@ ExtremeVineConditionalPredict <- function(vine, quantile_values, col_number, val
     function(i){ExtremeVineConditionalSimulation(vine, col_number, value = values[i], n = n, seed = seed) %>% as.matrix},
     matrix(0, ncol = n_vars, nrow=n))
   results <- list(
-    mean_pred =  apply(predict_vals, c(2,3), mean),
-    sd_pred =  apply(predict_vals, c(2,3), sd),
+    mean_pred =  t(apply(predict_vals, c(2,3), mean)),
+    sd_pred =  t(apply(predict_vals, c(2,3), sd)),
+    sd_pred_sample =  t(apply(predict_vals, c(2,3), sd))/sqrt(n),
     quantile_values = quantile_values
   )
   
+  results[['pred']] <- t(apply(results[['mean_pred']][,-col_number], 1, function(x){x>quantile_values}))
   
   return(results)
 }
 
+ExtremeVineConditionalIndicatorPredict <- function(vine, quantile_values, col_number, values, n, seed=42){
+  n_vars <- vine$structure$d
+  predict_vals <-  vapply(
+    1:length(values), 
+    function(i){ExtremeVineConditionalSimulation(vine, col_number, value = values[i], n = n, seed = seed) %>% as.matrix},
+    matrix(0, ncol = n_vars, nrow=n))
+  
+  # cut the unnecessary values
+  tmp_vals <- apply(
+    predict_vals[,-col_number,],
+    c(1,3),
+    function(x){x>quantile_values})
+  tmp_vals <- aperm(tmp_vals, c(2,1,3))
+  
+  results <- list(
+    mean_pred =  t(apply(tmp_vals, c(2,3), mean)),
+    sd_pred =  t(apply(tmp_vals, c(2,3), sd)),
+    sd_pred_sample =  t(apply(tmp_vals, c(2,3), sd))/sqrt(n),
+    quantile_values = quantile_values
+  )
+  results[['pred']] <- t(apply(results[['mean_pred']][,-col_number], 1, function(x){x>quantile_values}))
+  return(results)
+}
 
-
-ExtremeVinePlacingConditional <- function(rdm_data, cond_data, cond_on){
-  if(cond_on == 1){
-    return(c(cond_data, rdm_data))
-  }else if(cond_on == 2){
-    return(c(rdm_data, cond_data))
-  }else{
-    warning('cond_on should in c(1,2).')
-  }
+ExtremeVineTRON <- function(vine, quantiles, col_number, conditional_value){
+  # conditional value needs to a uniform
+  
 }
