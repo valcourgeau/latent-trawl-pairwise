@@ -38,7 +38,8 @@ vine_config[['show_trace']] = FALSE
 #                                         core=parallel::detectCores()-1)
 # print(full_vine_bic)
 
-evc <- ExtremeVineCollection(pollution_data, unif_pollution_data, horizons = c(1, 72), vine_config = vine_config, rescaling = T)
+evc <- ExtremeVineCollection(dataset = pollution_data, uniform_dataset = unif_pollution_data,
+                             horizons = c(1, 72), vine_config = vine_config, rescaling = T)
 evc$O3[[1]]$quantiles
 
 
@@ -47,12 +48,17 @@ final_col <- ncol(pollution_data) + 1
 vine_tmp <- evc[[col_cond_on]][[1]]$vine_fit
 vine_struc <- evc[[col_cond_on]][[1]]$vine_fit$structure
 
+# col_number is the column on which we condition on.
+# Usually, it is implicitly set to be the last column
 samples <- t(vapply(1:100/100,
                     function(x){
-                      apply(ExtremeVineConditionalSimulation(vine_tmp, col_number = final_col, value = x, n = 1), 2, mean)},
+                      apply(ExtremeVineConditionalSimulation(
+                        vine_tmp, col_number = final_col, value = x, n = 1),
+                        MARGIN = 2,
+                        FUN = mean)},
                     rep(0, ncol(pollution_data)+1)))
 
-par(mai=c(0.55,0.6,0.4,0.1), mfrow=c(7,1))
+par(mai=c(0.55,0.6,0.4,0.1), mfrow=c(4,2))
 plot(1:100/100, samples[,final_col],
      ylab=paste('(Control)'),
      xlab = paste(colnames(pollution_data)[col_cond_on], ' quantiles'), main = 'Quantiles as function of time t extreme',

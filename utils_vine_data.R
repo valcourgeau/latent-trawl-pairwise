@@ -103,7 +103,11 @@ ExtremeVineCollection <- function(dataset, uniform_dataset, horizons, vine_confi
     function(col_number){
         return(lapply(
           horizons,
-          function(horizon){return(ExtremeVineFit(dataset, uniform_dataset, col_number, horizon, vine_config, rescaling))}
+          function(horizon){
+            return(
+              ExtremeVineFit(dataset, uniform_dataset, col_number, horizon, vine_config, rescaling)
+            )
+          }
         )
       )
     }
