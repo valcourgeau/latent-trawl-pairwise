@@ -146,17 +146,29 @@ ExtremeVineConditionalIndicatorPredict(
 #############################
 #############################
 
-# Preducting (actual)
+# Prediction results
+test_prediction_output <- ExtremeVinePredictData(test_pollution_data, col_cond_on, 1)
+ExtremeVineData(test_pollution_data, uniform_dataset = test_unif_pollution_data, )
 
-ExtremeVineConditionalPredict(
+# Predicting (actual)
+pred_1 <- ExtremeVineConditionalPredict(
   vine = vine_tmp,
   quantile_values = vine_quantiles,
   col_number = final_col,
-  values = test_unif_pollution_data[1:1000,col_cond_on],
-  n = 10
+  values = test_unif_pollution_data[which(test_pollution_data[,col_cond_on]>0),col_cond_on][1:100],
+  n = 100
 )
 
+pred_1
 
+pred_2 <- ExtremeVineConditionalIndicatorPredict(
+  vine = vine_tmp,
+  quantile_values = vine_quantiles,
+  col_number = final_col,
+  values = test_unif_pollution_data[which(test_pollution_data[,col_cond_on]>0),col_cond_on][1:100],
+  n = 100
+)
 
+pred_2$pred
 
 

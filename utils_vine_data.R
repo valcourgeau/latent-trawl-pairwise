@@ -114,6 +114,39 @@ ExtremeVineData <- function(dataset, uniform_dataset, col_number, horizon, resca
   return(list(xvine_data=xvine_data, quantiles=quantiles, quantile_values=quantile_values))
 }
 
+ExtremeVineTestData <- function(dataset, uniform_dataset, test_dataset, test_uniform_dataset, horizon, col_number, rescaling=F){
+  # concatenate the variable at time t as the last column
+  unif_extract <- uniform_dataset[which(dataset[,col_number]>0), col_number]
+  base_ecdf <- ecdf(unif_extract)
+  test_unif_extract <- test_uniform_dataset[which(test_dataset[,col_number]>0), col_number]
+  
+  if(rescaling){
+    return(base_ecdf(test_unif_extract))  
+  }else{
+    return(test_unif_extract)
+  }
+}
+
+
+ExtremeVinePredictData <- function(dataset, col_number, horizon){
+  # concatenate the variable at time t as the last column
+  
+  index_pick <- FilterExtremeIndex(dataset, col_number, horizon)
+  # t + horizon data
+  xvine_data <- vapply(
+    1:ncol(dataset),
+    function(i){dataset[index_pick[,i],i]>0},
+    index_pick[,1])
+  
+  # adding origin (at time t) data
+  xvine_data <- cbind(
+    xvine_data,
+    dataset[index_pick[,ncol(dataset)+1],col_number] > 0
+  )
+  
+  return(xvine_data)
+}
+
 ExtremeVineTestData <- function(dataset, test_dataset, uniform_dataset, test_uniform_dataset, col_number, horizon, rescaling=F){
   # concatenate the variable at time t as the last column
   assertthat::are_equal(nrow(dataset), nrow(uniform_dataset))
