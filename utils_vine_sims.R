@@ -186,5 +186,5 @@ ExtremeVineConditionalIndicatorPredict <- function(vine, quantile_values, col_nu
 
 ExtremeVineTRON <- function(vine, quantiles, col_number, conditional_value){
   # conditional value needs to a uniform
-  
+  stop('Not Implemented')
 }

@@ -29,6 +29,40 @@ UniformFromGPDForMatrix <- function(dataset_origin, dataset, params){
   ))
 }
 
+UniformsFromGPDTestData <- function(data_origin, data, test_data_origin, test_data, xi, sigma){
+  # take oirinal data and zero/GPD-distributed data
+  # and transform into uniform(0,1)
+  positive_index <- which(data > 0.0)  
+  p_zero <- 1 - length(positive_index) / length(data)
+  ecdf_before_threshold <- ecdf(data_origin[-positive_index])
+  
+  test_positive_index <- which(test_data > 0)
+  test_data[test_positive_index] <- p_zero +  (1-p_zero) * 
+    evir::pgpd(q = test_data[test_positive_index],
+               xi = xi,
+               beta = sigma)
+  test_data[-test_positive_index] <- p_zero * ecdf_before_threshold(test_data_origin[-test_positive_index])
+  
+  return(test_data)
+}
+
+UniformFromGPDForMatrixTestData <- function(dataset_origin, dataset, test_dataset_origin, test_dataset, params){
+  # datasets are organised in cols
+  # params in rows (xi, sigma)
+  return(vapply(
+    1:ncol(dataset_origin),
+    FUN = function(i){
+      UniformsFromGPDTestData(data_origin = dataset_origin[,i],
+                      data = dataset[,i],
+                      test_data_origin = test_dataset_origin[,i],
+                      test_data = test_dataset[,i],
+                      xi = params[i,1],
+                      sigma = params[i,2])
+    },
+    rep(0, nrow(test_dataset_origin))
+  ))
+}
+
 FilterExtremeIndex <- function(dataset, col_number, horizon){
   n_elems <- nrow(dataset)
   index_pick <- which(dataset[,col_number] > 0.0)
