@@ -166,7 +166,7 @@ DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.1, 
   # lin_rho <- line(x = c(0, 1:(depth-2)), abs(log(pmax(kk$acf[1:(depth-1)], 1e-7))))
   # rho_tmp <- abs(lin_rho$coefficients[2])
   # rho_tab <- exp(seq(log(rho_tmp*mult_fac[1]), log(rho_tmp*mult_fac[2]), length.out = n_trials))
-  rho_tab <- exp(seq(log(0.01), log(1.0), length.out = n_trials))
+  rho_tab <- exp(seq(log(0.005), log(1.0), length.out = n_trials))
   
   for(rho_iter in rho_tab){
     if(!is.null(cl)){
@@ -185,9 +185,6 @@ DupuisSimplified <- function(data_u, n_trials=10, acf_depth=15, mult_fac=c(0.1, 
     mse_tab[index] <- sum(((kk$acf - acf_vals)^2))
     index <- index + 1
   }
-  
-
-  
   params[4] <- rho_tab[which.min(mse_tab)]
   
   if(params_original[1] < 0){

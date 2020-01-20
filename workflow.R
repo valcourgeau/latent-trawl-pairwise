@@ -6,6 +6,8 @@ pollution_data <- pollution_data[,-1]
 head(pollution_data)
 
 max_length <- 100000
+
+# PL full
 marginal_fit <- lapply(1:ncol(pollution_data), 
        function(i){
          SubSampleFit(
@@ -15,7 +17,7 @@ marginal_fit <- lapply(1:ncol(pollution_data),
            method = 'PL',
            trials = 1,
            parallel = F,
-           file_csv = paste(colnames(pollution_data)[i], '_full_pl.csv', sep=''),
+           file_csv = paste(colnames(pollution_data)[i], '_full_pl_10.csv', sep=''),
            subfolder = 'analysis/pollution/results/',
            n_trials=50,
            seed=41,
@@ -23,7 +25,39 @@ marginal_fit <- lapply(1:ncol(pollution_data),
            bounds='ow'
          )
        }
-)
+) # NOTE if error with parallel, reload pairwise.R
+
+results_numeric <- marginal_fit[[1]][1,]
+for(res in marginal_fit){
+  results_numeric <- rbind(results_numeric, res[2,])
+}
+colnames(results_numeric) <- c('xi', 'sigma', 'kappa', 'rho')
+results <- list(params = t(as.matrix(marginal_fit[[1]][1,])), numerics = results_numeric[-1,])
+colnames(results$params) <- c('N', 'delta', 'sub_length', 'trials')
+rownames(results$numerics) <- colnames(pollution_data)
+results
+rlist::list.save(results, 'analysis/pollution/results/results_pl_full.RData')
+
+
+# GMM full
+marginal_fit <- lapply(1:ncol(pollution_data), 
+                       function(i){
+                         SubSampleFit(
+                           data=pollution_data[1:max_length,i],
+                           depth = 5,
+                           sub_length = max_length-1,
+                           method = 'GMM',
+                           trials = 1,
+                           parallel = F,
+                           file_csv = paste(colnames(pollution_data)[i], '_full_gmm_10.csv', sep=''),
+                           subfolder = 'analysis/pollution/results/',
+                           n_trials=50,
+                           seed=41,
+                           acf_depth=20,
+                           bounds='ow'
+                         )
+                       }
+) # NOTE if error with parallel, reload pairwise.R
 
 results_numeric <- marginal_fit[[1]][1,]
 for(res in marginal_fit){

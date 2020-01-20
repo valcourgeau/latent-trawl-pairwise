@@ -19,6 +19,16 @@ GetKappa <- function(data, params, parametrisation='standard'){
   }
 }
 
+CompareMatrixVector <- function(mat, vec, operator){
+   if(ncol(mat) ==  length(vec)){
+     scale_up_vec <- matrix(rep(vec, nrow(mat)), byrow = T, ncol = ncol(mat))
+   }else if(nrow(mat) == length(vec)){
+     scale_up_vec <- matrix(rep(vec, ncol(mat)), byrow = F, nrow = nrow(mat))
+   }
+
+  return(do.call(operator, list(mat, scale_up_vec)))
+}
+
 ParametrisationTranslator <- function(params, parametrisation, target='noven', target_alpha=3.0){
   # from parametrisation to noven
   params_target <- params

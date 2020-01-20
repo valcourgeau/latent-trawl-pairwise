@@ -46,6 +46,7 @@ FilterExtremeIndex <- function(dataset, col_number, horizon){
 }
 
 ExtremeVineData <- function(dataset, uniform_dataset, col_number, horizon, rescaling=F){
+  # concatenate the variable at time t as the last column
   assertthat::are_equal(nrow(dataset), nrow(uniform_dataset))
   assertthat::are_equal(ncol(dataset), ncol(uniform_dataset))
   
@@ -79,9 +80,66 @@ ExtremeVineData <- function(dataset, uniform_dataset, col_number, horizon, resca
   return(list(xvine_data=xvine_data, quantiles=quantiles, quantile_values=quantile_values))
 }
 
+ExtremeVineTestData <- function(dataset, test_dataset, uniform_dataset, test_uniform_dataset, col_number, horizon, rescaling=F){
+  # concatenate the variable at time t as the last column
+  assertthat::are_equal(nrow(dataset), nrow(uniform_dataset))
+  assertthat::are_equal(ncol(dataset), ncol(uniform_dataset))
+  
+  assertthat::are_equal(nrow(test_dataset), nrow(test_uniform_dataset))
+  assertthat::are_equal(ncol(test_dataset), ncol(test_uniform_dataset))
+  
+  index_pick <- FilterExtremeIndex(dataset, col_number, horizon)
+  index_pick_test <- FilterExtremeIndex(test_dataset, col_number, horizon)
+  
+  # t + horizon data
+  xvine_data <- vapply(
+    1:ncol(dataset),
+    function(i){uniform_dataset[index_pick[,i],i]},
+    index_pick[,1])
+  
+  # adding origin (at time t) data
+  xvine_data <- cbind(
+    xvine_data,
+    uniform_dataset[index_pick[,ncol(dataset)+1],col_number]
+  )
+  
+  # same for test
+  xvine_test_data <- vapply(
+    1:ncol(dataset),
+    function(i){test_uniform_dataset[index_pick_test[,i],i]},
+    index_pick_test[,1])
+  
+  xvine_test_data <- cbind(
+    xvine_test_data,
+    test_uniform_dataset[index_pick_test[,ncol(dataset)+1],col_number]
+  )
+  
+  
+  if(rescaling){
+    ecdf_xvine <- apply(xvine_data, MARGIN = 2,
+                        function(x){ecdf(x)})
+    print(ecdf_xvine)
+    xvine_data <- apply(xvine_data, MARGIN = 2,
+                        function(x){ecdf_tmp <- ecdf(x); return(ecdf_tmp(x))})
+    xvine_test_data <- vapply(1:ncol(xvine_test_data), function(i){ecdf_xvine[[i]](xvine_test_data[,i])}, rep(0, nrow(xvine_test_data)))
+  }
+  
+  extreme_data <- vapply(
+    1:ncol(dataset),
+    function(i){dataset[index_pick[,i],i]},
+    index_pick[,1])
+  xvne_proba_zero <- 1-apply(extreme_data > 0, 2, mean)
+  
+  quantiles <- xvne_proba_zero
+  quantile_values <- vapply(1:ncol(uniform_dataset),
+                            function(i){quantile(xvine_data[,i], quantiles[i])}, 1.0)
+  return(list(xvine_data=xvine_data, quantiles=quantiles, quantile_values=quantile_values,
+              xvine_test_data=xvine_test_data))
+}
+
+
 ExtremeVineFit <- function(dataset, uniform_dataset, col_number, horizon, vine_config, rescaling=F){
   xvine_data <- ExtremeVineData(dataset, uniform_dataset, col_number, horizon, rescaling)
-  print(head(xvine_data$xvine_data))
   time_before <- Sys.time()
   cat('Starting fit on column', col_number, '\n')
   vine_fit <- rvinecopulib::vinecop(

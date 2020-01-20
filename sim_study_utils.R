@@ -21,6 +21,9 @@ EVTrawlFit <- function(data, depth, method, parametrisation='standard', type='ex
       return(trawl_pl_basic(c(params, trawl_params)))
     }
     if(bounds == 'config'){
+      for(i in 1:100){
+        print(parallel)
+      }
       trawl_res <- stats::optim(fn = trawl_pl_restricted,
                                 par = vapply(1:trawl_cfg$n_params, function(i){
                                   runif(n = 1,
@@ -54,7 +57,8 @@ EVTrawlFit <- function(data, depth, method, parametrisation='standard', type='ex
 }
 
 
-SubSampleFit <- function(data, depth, sub_length, method, trials, file_csv, parametrisation='standard', type='exp', parallel=F, seed=42, subfolder='simulation/results/', ...){
+SubSampleFit <- function(data, depth, sub_length, method, trials, file_csv,
+                         parametrisation='standard', type='exp', parallel=F, seed=42, subfolder='simulation/results/', ...){
   # method 'PL' or 'GMM'
   n <- length(data)
   set.seed(seed)
@@ -83,7 +87,6 @@ SubSampleFit <- function(data, depth, sub_length, method, trials, file_csv, para
                         'StandTrawlTerms',
                         'EVTrawlFit',
                         'CustomMarginalMLE',
-                        'ExponentialTrawl',
                         'GetKappa',
                         'TrawlPL',
                         'GetTrawlParamsConfig',

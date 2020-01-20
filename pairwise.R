@@ -317,7 +317,7 @@ TrawlPLFunctional <- function(params, depth, type='exp', parametrisation='standa
     return((-1)*PLOperator(data))})
 }
 
-TrawlPL <- function(data, depth, type='exp', parametrisation='standard', parallel=TRUE){
+TrawlPL <- function(data, depth, type='exp', parametrisation='standard', parallel=T){
   return(function(params){
     pl_functional <- TrawlPLFunctional(params = params,
                         depth = depth,
