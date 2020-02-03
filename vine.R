@@ -148,27 +148,52 @@ ExtremeVineConditionalIndicatorPredict(
 
 # Prediction results
 test_prediction_output <- ExtremeVinePredictData(test_pollution_data, col_cond_on, 1)
-ExtremeVineData(test_pollution_data, uniform_dataset = test_unif_pollution_data, )
 
 # Predicting (actual)
+# input data
+input_data <- ExtremeVineTestData(
+  dataset = pollution_data,
+  uniform_dataset = unif_pollution_data,
+  test_dataset = test_pollution_data,
+  test_uniform_dataset = test_unif_pollution_data,
+  horizon = 1,
+  col_number = col_cond_on,
+  rescaling = T
+) 
+
 pred_1 <- ExtremeVineConditionalPredict(
   vine = vine_tmp,
   quantile_values = vine_quantiles,
   col_number = final_col,
-  values = test_unif_pollution_data[which(test_pollution_data[,col_cond_on]>0),col_cond_on][1:100],
-  n = 100
+  values = input_data[1:100],
+  n = 1000
 )
-
-pred_1
 
 pred_2 <- ExtremeVineConditionalIndicatorPredict(
   vine = vine_tmp,
   quantile_values = vine_quantiles,
   col_number = final_col,
-  values = test_unif_pollution_data[which(test_pollution_data[,col_cond_on]>0),col_cond_on][1:100],
-  n = 100
+  values = input_data[1:100],
+  n = 1000
 )
 
 pred_2$pred
+
+for(i in 1:ncol(pred_1$pred)){
+  cat('Prediction var', colnames(pollution_data)[i], '\n')
+  cm <- caret::confusionMatrix(
+    data=as.factor(as.numeric(pred_1$pred[,i])),
+    reference=as.factor(as.numeric(test_prediction_output[1:100,i]))
+  )
+  print(cm$table)
+  cm2 <- caret::confusionMatrix(
+    data=as.factor(as.numeric(pred_2$pred[,i])),
+    reference=as.factor(as.numeric(test_prediction_output[1:100,i]))
+  )
+  print(cm2$table)
+  # print(cm)
+  
+  cat('------------------------------\n')
+}
 
 
