@@ -188,18 +188,35 @@ ExtremeVineConditionalIndicatorPredict <- function(vine, quantile_values, col_nu
 }
 
 ExtremeVineMarginalCondSim <- function(xi, sigma, u, n){
-  # sim from X - u | X > u for X | X > 0 ~ GPD(xi, sigma)
+  # sim from X | X > u (~ GPD(u; xi, sigma+u*xi)) where X | X > 0 ~ GPD(xi, sigma)
   # no reset of seed
-  return(evir::rgpd(n = n, xi = xi, mu = 0, beta = sigma + u*xi))
+  return(u + evir::rgpd(n = n, xi = xi, mu = 0, beta = sigma + u*xi))
 }
 
-ExtremeVineTRON <- function(vine, quantiles, col_number, cond_threshold, xi, sigma, n, seed=42){
+ExtremeVineTRON <- function(vine, quantile_values, extreme_quantile, col_number, cond_threshold, xi, sigma, n, ecdf_rescaling, seed=42){
+  # cond_theshold is in the original scale: threshold for extreme data (default: 0.0)
   # Computes the (non-conditional) TRONs
-  if(!is.null(seed)){
-    set.seed(seed)
-  }
+  if(!is.null(seed)){set.seed(seed)}
+  
   cond_values <- ExtremeVineMarginalCondSim(xi = xi, sigma = sigma, u = cond_threshold, n = n)
-  return(
-    ExtremeVineConditionalSimulation(vine = vine, col_number = col_number, value = cond_val, n = 1, seed = NULL)
-  )
+  cond_values <- extreme_quantile + (1-extreme_quantile) * evir::pgpd(cond_values, xi = xi, mu = 0.0, beta = sigma)
+  cond_values <- ecdf_rescaling(cond_values)
+  # return one sims for each value incond_values
+  
+  values_from_vine <- t(
+      vapply(cond_values,
+             FUN = function(cond_val){
+               ExtremeVineConditionalSimulation(vine = vine, col_number = col_number, value = cond_val, n = 1, seed = NULL)
+             },
+             rep(0, vine_tmp$structure$d))
+    )
+  above_threshold <- t(apply(values_from_vine[,-col_number], 1, function(x){x>quantile_values}))
+  
+  result <- list()
+  result[['TRON']] <- apply(above_threshold, 2, mean)
+  result[['sd']] <- apply(above_threshold, 2, sd)
+  result[['sd_sample']] <- result[['sd']] / sqrt(n)
+  result[['quantile_values']] <- quantile_values
+  
+  return(result)
 }

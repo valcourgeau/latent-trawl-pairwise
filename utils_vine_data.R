@@ -1,3 +1,16 @@
+ExtremeCompleteCDF <- function(data_origin, data, xi, sigma){
+  positive_index <- which(data > 0.0)  
+  p_zero <- 1 - length(positive_index) / length(data)
+  origin_quantile <- quantile(data_origin, p_zero)
+  function(x){
+    return(evir::pgpd(q = x,
+                      xi = xi,
+                      beta = sigma))
+  }
+  
+  print(summary(pmax(data_origin-origin_quantile, 0)))
+  print(summary(data))
+}
 
 UniformsFromGPD <- function(data_origin, data, xi, sigma){
   # take oirinal data and zero/GPD-distributed data
@@ -97,6 +110,9 @@ ExtremeVineData <- function(dataset, uniform_dataset, col_number, horizon, resca
     uniform_dataset[index_pick[,ncol(dataset)+1],col_number]
   )
   
+  ecdf_rescaling <- apply(xvine_data, MARGIN = 2,
+                          function(x){ecdf(x)})
+  
   if(rescaling){
     xvine_data <- apply(xvine_data, MARGIN = 2,
                         function(x){ecdf_tmp <- ecdf(x); return(ecdf_tmp(x))})
@@ -111,21 +127,22 @@ ExtremeVineData <- function(dataset, uniform_dataset, col_number, horizon, resca
   quantiles <- xvne_proba_zero
   quantile_values <- vapply(1:ncol(uniform_dataset),
                             function(i){quantile(xvine_data[,i], quantiles[i])}, 1.0)
-  return(list(xvine_data=xvine_data, quantiles=quantiles, quantile_values=quantile_values))
+  return(list(xvine_data=xvine_data, quantiles=quantiles, 
+              quantile_values=quantile_values, ecdf_rescaling=ecdf_rescaling))
 }
 
-ExtremeVineTestData <- function(dataset, uniform_dataset, test_dataset, test_uniform_dataset, horizon, col_number, rescaling=F){
-  # concatenate the variable at time t as the last column
-  unif_extract <- uniform_dataset[which(dataset[,col_number]>0), col_number]
-  base_ecdf <- ecdf(unif_extract)
-  test_unif_extract <- test_uniform_dataset[which(test_dataset[,col_number]>0), col_number]
-  
-  if(rescaling){
-    return(base_ecdf(test_unif_extract))  
-  }else{
-    return(test_unif_extract)
-  }
-}
+# ExtremeVineTestData <- function(dataset, uniform_dataset, test_dataset, test_uniform_dataset, horizon, col_number, rescaling=F){
+#   # concatenate the variable at time t as the last column
+#   unif_extract <- uniform_dataset[which(dataset[,col_number]>0), col_number]
+#   base_ecdf <- ecdf(unif_extract)
+#   test_unif_extract <- test_uniform_dataset[which(test_dataset[,col_number]>0), col_number]
+#   
+#   if(rescaling){
+#     return(base_ecdf(test_unif_extract))  
+#   }else{
+#     return(test_unif_extract)
+#   }
+# }
 
 
 ExtremeVinePredictData <- function(dataset, col_number, horizon){
@@ -181,11 +198,9 @@ ExtremeVineTestData <- function(dataset, test_dataset, uniform_dataset, test_uni
     test_uniform_dataset[index_pick_test[,ncol(dataset)+1],col_number]
   )
   
-  
+  ecdf_rescaling <- apply(xvine_data, MARGIN = 2,
+                      function(x){ecdf(x)})
   if(rescaling){
-    ecdf_xvine <- apply(xvine_data, MARGIN = 2,
-                        function(x){ecdf(x)})
-    print(ecdf_xvine)
     xvine_data <- apply(xvine_data, MARGIN = 2,
                         function(x){ecdf_tmp <- ecdf(x); return(ecdf_tmp(x))})
     xvine_test_data <- vapply(1:ncol(xvine_test_data), function(i){ecdf_xvine[[i]](xvine_test_data[,i])}, rep(0, nrow(xvine_test_data)))
@@ -197,11 +212,11 @@ ExtremeVineTestData <- function(dataset, test_dataset, uniform_dataset, test_uni
     index_pick[,1])
   xvne_proba_zero <- 1-apply(extreme_data > 0, 2, mean)
   
-  quantiles <- xvne_proba_zero
+  quantiles_zero <- xvne_proba_zero
   quantile_values <- vapply(1:ncol(uniform_dataset),
-                            function(i){quantile(xvine_data[,i], quantiles[i])}, 1.0)
-  return(list(xvine_data=xvine_data, quantiles=quantiles, quantile_values=quantile_values,
-              xvine_test_data=xvine_test_data))
+                            function(i){quantile(xvine_data[,i], quantiles_zero[i])}, 1.0)
+  return(list(xvine_data=xvine_data, quantiles=quantiles_zero, quantile_values=quantile_values,
+              xvine_test_data=xvine_test_data, ecdf_rescaling=ecdf_rescaling))
 }
 
 

@@ -125,6 +125,25 @@ ExtremeVineExtractConditional(evc$O3[[1]], 4)
 #############################
 #############################
 
+input_data_tron <- ExtremeVineData(
+  dataset = pollution_data,
+  uniform_dataset = unif_pollution_data,
+  horizon = 1,
+  col_number = col_cond_on,
+  rescaling = T
+)
+
+# TRONs
+ExtremeVineTRON(vine = vine_tmp, extreme_quantile = empirical_quantiles[col_cond_on],
+                quantile_values = vine_quantiles,
+                col_number = final_col, cond_threshold = 0.0,
+                ecdf_rescaling = input_data_tron$ecdf_rescaling[[final_col]],
+                xi = pollution_gmm[col_cond_on, 1], sigma = pollution_gmm[col_cond_on, 2],
+                n=1000, seed=42)
+
+#############################
+#############################
+
 # Predicting tests
 ExtremeVineConditionalPredict(
   vine = vine_tmp,
