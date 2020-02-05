@@ -134,7 +134,10 @@ ExtremeVineCondSimSingle <- function(vine, col_number, value){
 }
 
 ExtremeVineConditionalSimulation <- function(vine, col_number, value, n, seed=42){
-  set.seed(42)
+  if(!is.null(seed)){
+    set.seed(seed)
+  }
+  
   return(
     t(
       vapply(1:n, FUN = function(i){ExtremeVineCondSimSingle(vine, col_number, value)}, rep(0, vine_tmp$structure$d))
@@ -184,7 +187,19 @@ ExtremeVineConditionalIndicatorPredict <- function(vine, quantile_values, col_nu
   return(results)
 }
 
-ExtremeVineTRON <- function(vine, quantiles, col_number, conditional_value){
-  # conditional value needs to a uniform
-  stop('Not Implemented')
+ExtremeVineMarginalCondSim <- function(xi, sigma, u, n){
+  # sim from X - u | X > u for X | X > 0 ~ GPD(xi, sigma)
+  # no reset of seed
+  return(evir::rgpd(n = n, xi = xi, mu = 0, beta = sigma + u*xi))
+}
+
+ExtremeVineTRON <- function(vine, quantiles, col_number, cond_threshold, xi, sigma, n, seed=42){
+  # Computes the (non-conditional) TRONs
+  if(!is.null(seed)){
+    set.seed(seed)
+  }
+  cond_values <- ExtremeVineMarginalCondSim(xi = xi, sigma = sigma, u = cond_threshold, n = n)
+  return(
+    ExtremeVineConditionalSimulation(vine = vine, col_number = col_number, value = cond_val, n = 1, seed = NULL)
+  )
 }
