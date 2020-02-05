@@ -159,13 +159,13 @@ input_data <- ExtremeVineTestData(
   horizon = 1,
   col_number = col_cond_on,
   rescaling = T
-) 
+)
 
 pred_1 <- ExtremeVineConditionalPredict(
   vine = vine_tmp,
   quantile_values = vine_quantiles,
   col_number = final_col,
-  values = input_data[1:100],
+  values = input_data$xvine_data[1:100],
   n = 1000
 )
 
@@ -173,7 +173,7 @@ pred_2 <- ExtremeVineConditionalIndicatorPredict(
   vine = vine_tmp,
   quantile_values = vine_quantiles,
   col_number = final_col,
-  values = input_data[1:100],
+  values = input_data$xvine_data[1:100],
   n = 1000
 )
 
