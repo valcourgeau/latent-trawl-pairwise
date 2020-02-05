@@ -217,6 +217,10 @@ ExtremeVineTRON <- function(vine, quantile_values, extreme_quantile, col_number,
   result[['sd']] <- apply(above_threshold, 2, sd)
   result[['sd_sample']] <- result[['sd']] / sqrt(n)
   result[['quantile_values']] <- quantile_values
+  result[['xi']] <- xi
+  results[['sigma']] <- sigma
+  results[['extreme_quantile']] <- extreme_quantile
+  results[['seed']] <- seed
   
   return(result)
 }

@@ -203,7 +203,7 @@ ExtremeVineTestData <- function(dataset, test_dataset, uniform_dataset, test_uni
   if(rescaling){
     xvine_data <- apply(xvine_data, MARGIN = 2,
                         function(x){ecdf_tmp <- ecdf(x); return(ecdf_tmp(x))})
-    xvine_test_data <- vapply(1:ncol(xvine_test_data), function(i){ecdf_xvine[[i]](xvine_test_data[,i])}, rep(0, nrow(xvine_test_data)))
+    xvine_test_data <- vapply(1:ncol(xvine_test_data), function(i){ecdf_rescaling[[i]](xvine_test_data[,i])}, rep(0, nrow(xvine_test_data)))
   }
   
   extreme_data <- vapply(
@@ -223,7 +223,7 @@ ExtremeVineTestData <- function(dataset, test_dataset, uniform_dataset, test_uni
 ExtremeVineFit <- function(dataset, uniform_dataset, col_number, horizon, vine_config, rescaling=F){
   xvine_data <- ExtremeVineData(dataset, uniform_dataset, col_number, horizon, rescaling)
   time_before <- Sys.time()
-  cat('Starting fit on column', col_number, '\n')
+  cat('Starting fit on column', col_number, 'with horizon', horizon, '\n')
   vine_fit <- rvinecopulib::vinecop(
     data = xvine_data$xvine_data,
     family_set = vine_config[['family_set']],

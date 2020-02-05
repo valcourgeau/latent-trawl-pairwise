@@ -184,16 +184,16 @@ pred_1 <- ExtremeVineConditionalPredict(
   vine = vine_tmp,
   quantile_values = vine_quantiles,
   col_number = final_col,
-  values = input_data$xvine_data[1:100],
-  n = 1000
+  values = input_data$xvine_data[1:100, final_col],
+  n = 100
 )
 
 pred_2 <- ExtremeVineConditionalIndicatorPredict(
   vine = vine_tmp,
   quantile_values = vine_quantiles,
   col_number = final_col,
-  values = input_data$xvine_data[1:100],
-  n = 1000
+  values = input_data$xvine_data[1:100, final_col],
+  n = 100
 )
 
 pred_2$pred
