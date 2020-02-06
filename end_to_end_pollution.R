@@ -86,7 +86,14 @@ rlist::list.save(subdataset_collection,
 evc <- ExtremeVineCollection(dataset = pollution_data, uniform_dataset = unif_pollution_data,
                              horizons = vine_horizons_set, vine_config = vine_config, rescaling = T)
 rlist::list.save(evc,
-    paste('analysis/pollution/end_to_end_pollution/vine_checkpoints/', Sys.Date(), '_vines.RData', sep = ''))
+                 paste('analysis/pollution/end_to_end_pollution/vine_checkpoints/', Sys.Date(), '_vines.RData', sep = ''))
+
+#############################
+#############################
+
+# PLOTS 
+plot(evc$O3[[1]]$vine_fit, tree=2, var_names = "use", edge_labels = 'family_tau')
+
 
 #############################
 #############################
@@ -149,6 +156,10 @@ for(horizon_number in 1:length(vine_horizons_set)){
     # true values
     train_prediction_output <- ExtremeVinePredictData(test_pollution_data, col_cond_on, 1)
     test_prediction_output <- ExtremeVinePredictData(test_pollution_data, col_cond_on, 1)
+    true_prediction_output <- list(
+      'train'=train_prediction_output[predict_train_index,],
+      'test'=test_prediction_output[predict_train_index,]
+    )
     
     # input data
     input_data <- ExtremeVineTestData(
@@ -188,6 +199,17 @@ for(horizon_number in 1:length(vine_horizons_set)){
       )
       prediction_results[['indicator_pred']] <- pred_2
       
+      # TODO
+      warning('need to implement prediction metrics')
+      # print(as.factor(as.numeric(pred_1$pred[,i])))
+      # print(as.factor(as.numeric(true_prediction_output[[tag]][,i])))
+      # for(i in 1:ncol(input_data$xvine_data)){
+      #   cm <- caret::confusionMatrix(
+      #     data=as.factor(as.numeric(pred_1$pred[,i])),
+      #     reference=as.factor(as.numeric(true_prediction_output[[tag]][,i]))
+      #   )
+      # }
+      
       two_phases_predict[[tag]] <- prediction_results
     }
     
@@ -202,7 +224,22 @@ for(horizon_number in 1:length(vine_horizons_set)){
 rlist::list.save(conditional_tron_compute,
                  paste('analysis/pollution/end_to_end_pollution/pollution/end_to_end_pollution/conditional_tron/', Sys.Date(), '_TRON.RData', sep = ''))
 
-
+for(i in 1:ncol(pred_1$pred)){
+  cat('Prediction var', colnames(pollution_data)[i], '\n')
+  cm <- caret::confusionMatrix(
+    data=as.factor(as.numeric(pred_1$pred[,i])),
+    reference=as.factor(as.numeric(test_prediction_output[1:100,i]))
+  )
+  print(cm$table)
+  cm2 <- caret::confusionMatrix(
+    data=as.factor(as.numeric(pred_2$pred[,i])),
+    reference=as.factor(as.numeric(test_prediction_output[1:100,i]))
+  )
+  print(cm2$table)
+  # print(cm)
+  
+  cat('------------------------------\n')
+}
 #############################
 #############################
 

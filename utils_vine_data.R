@@ -224,6 +224,8 @@ ExtremeVineFit <- function(dataset, uniform_dataset, col_number, horizon, vine_c
   xvine_data <- ExtremeVineData(dataset, uniform_dataset, col_number, horizon, rescaling)
   time_before <- Sys.time()
   cat('Starting fit on column', col_number, 'with horizon', horizon, '\n')
+  target_name <- colnames(dataset)[col_number]
+  colnames(xvine_data$xvine_data) <- c(colnames(dataset), paste('ex-ante', target_name))
   vine_fit <- rvinecopulib::vinecop(
     data = xvine_data$xvine_data,
     family_set = vine_config[['family_set']],
