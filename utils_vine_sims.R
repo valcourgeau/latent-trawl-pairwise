@@ -157,7 +157,6 @@ ExtremeVineConditionalPredict <- function(vine, quantile_values, col_number, val
     sd_pred_sample =  t(apply(predict_vals, c(2,3), sd))/sqrt(n),
     quantile_values = quantile_values
   )
-  
   results[['pred']] <- t(apply(results[['mean_pred']][,-col_number], 1, function(x){x>quantile_values}))
   
   return(results)
@@ -176,7 +175,6 @@ ExtremeVineConditionalIndicatorPredict <- function(vine, quantile_values, col_nu
     c(1,3),
     function(x){x>quantile_values})
   tmp_vals <- aperm(tmp_vals, c(2,1,3))
-  
   results <- list(
     mean_pred =  t(apply(tmp_vals, c(2,3), mean)),
     sd_pred =  t(apply(tmp_vals, c(2,3), sd)),
@@ -218,9 +216,9 @@ ExtremeVineTRON <- function(vine, quantile_values, extreme_quantile, col_number,
   result[['sd_sample']] <- result[['sd']] / sqrt(n)
   result[['quantile_values']] <- quantile_values
   result[['xi']] <- xi
-  results[['sigma']] <- sigma
-  results[['extreme_quantile']] <- extreme_quantile
-  results[['seed']] <- seed
+  result[['sigma']] <- sigma
+  result[['extreme_quantile']] <- extreme_quantile
+  result[['seed']] <- seed
   
   return(result)
 }

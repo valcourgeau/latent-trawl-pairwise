@@ -17,9 +17,9 @@ vine_horizons_set <- c(1, 2) # c(1, 2, 3, 4, 6, 12, 24, 48)
 
 n_tron <- 100
 
-n_ctron <- 100
-predict_train_index <- 1:100
-predict_test_index <- 1:100
+n_ctron <- 10
+predict_train_index <- 1:10
+predict_test_index <- 1:10
 
 
 #############################
@@ -86,7 +86,7 @@ rlist::list.save(subdataset_collection,
 evc <- ExtremeVineCollection(dataset = pollution_data, uniform_dataset = unif_pollution_data,
                              horizons = vine_horizons_set, vine_config = vine_config, rescaling = T)
 rlist::list.save(evc,
-    paste('data/end_to_end_pollution/vine_checkpoints/', Sys.Date(), '_vines.RData', sep = ''))
+    paste('analysis/pollution/end_to_end_pollution/vine_checkpoints/', Sys.Date(), '_vines.RData', sep = ''))
 
 #############################
 #############################
@@ -124,7 +124,7 @@ for(horizon_number in 1:length(vine_horizons_set)){
 }
 
 rlist::list.save(tron_compute,
-                 paste('data/end_to_end_pollution/tron/', Sys.Date(), '_TRON.RData', sep = ''))
+                 paste('analysis/pollution/end_to_end_pollution/tron/', Sys.Date(), '_TRON.RData', sep = ''))
 
 #############################
 #############################
@@ -135,14 +135,11 @@ rlist::list.save(tron_compute,
 train_prediction_output <- ExtremeVinePredictData(pollution_data, col_cond_on, 1)
 test_prediction_output <- ExtremeVinePredictData(test_pollution_data, col_cond_on, 1)
 
-
-
-pred_2$pred
-
-conditiona_tron_compute <- list()
+conditional_tron_compute <- list()
 for(horizon_number in 1:length(vine_horizons_set)){
   ctron_for_one_horizon <- list()
   for(col_cond_on in 1:ncol(pollution_data)){
+    print(col_cond_on)
     ev_ctrons <- list()
     final_col <- ncol(pollution_data) + 1
     vine_tmp <- evc[[col_cond_on]][[1]]$vine_fit
@@ -164,23 +161,23 @@ for(horizon_number in 1:length(vine_horizons_set)){
       rescaling = T
     )
     
-    xvine_train_test_data <- c(
-      input_data$xvine_data[predict_train_index, final_col],
-      input_data$xvine_test_data[predict_test_index, final_col]
+    xvine_train_test_data <- list(
+      'train'=input_data$xvine_data[predict_train_index, final_col],
+      'test'=input_data$xvine_test_data[predict_test_index, final_col]
     )
     
     two_phases_predict <- list()
-    tag_index <- 1
     for(tag in c('train', 'test')){
+      print(tag)
       prediction_results <- list()
       pred_1 <- ExtremeVineConditionalPredict(
         vine = vine_tmp,
         quantile_values = vine_quantiles,
         col_number = final_col,
-        values = xvine_train_test_data[tag_index],
+        values = xvine_train_test_data[[tag]],
         n = n_ctron
       )
-      prediction_results[['conditional']] <- pred_1
+      prediction_results[['avg_pred']] <- pred_1
       
       pred_2 <- ExtremeVineConditionalIndicatorPredict(
         vine = vine_tmp,
@@ -189,7 +186,7 @@ for(horizon_number in 1:length(vine_horizons_set)){
         values = input_data$xvine_data[1:100],
         n = n_ctron
       )
-      prediction_results[['indicator']] <- pred_2
+      prediction_results[['indicator_pred']] <- pred_2
       
       two_phases_predict[[tag]] <- prediction_results
     }
@@ -197,8 +194,64 @@ for(horizon_number in 1:length(vine_horizons_set)){
     ev_ctrons[['predictions']] <- two_phases_predict
     ev_ctrons[['horizon']] <- vine_horizons_set[horizon_number]
     
-    ctron_for_one_horizon[[colnames(pollution_data)[col_cond_on]]] <- ev_trons
+    ctron_for_one_horizon[[colnames(pollution_data)[col_cond_on]]] <- ev_ctrons
   }
-  conditiona_tron_compute[[horizon_number]] <- ctron_for_one_horizon  
+  conditional_tron_compute[[horizon_number]] <- ctron_for_one_horizon  
 }
 
+rlist::list.save(conditional_tron_compute,
+                 paste('analysis/pollution/end_to_end_pollution/pollution/end_to_end_pollution/conditional_tron/', Sys.Date(), '_TRON.RData', sep = ''))
+
+
+#############################
+#############################
+
+# Quantiles vs conditional values
+
+# Shortcuts
+
+for(horizon_number in 1:length(vine_horizons_set)){
+  for(col_cond_on in 1:ncol(pollution_data)){
+    final_col <- ncol(pollution_data) + 1
+    vine_tmp <- evc[[col_cond_on]][[1]]$vine_fit
+    vine_struc <- evc[[col_cond_on]][[1]]$vine_fit$structure
+    vine_quantiles <- evc[[col_cond_on]][[1]]$quantiles
+    
+    # col_number is the column on which we condition on.
+    # Usually, it is implicitly set to be the last column
+    samples <- t(vapply(1:100/100,
+                        function(x){
+                          apply(ExtremeVineConditionalSimulation(
+                            vine_tmp, col_number = final_col, value = x, n = 1),
+                            MARGIN = 2,
+                            FUN = mean)},
+                        rep(0, ncol(pollution_data)+1)))
+    
+    cor_mat <- cor(unif_pollution_data)
+    
+    multiplier <- 1.4
+    pic_name <- paste("analysis/pollution/end_to_end_pollution/images/response_quantiles/",  vine_horizons_set[horizon_number], "/response_",
+                      colnames(pollution_data)[col_cond_on], "_horizon", vine_horizons_set[horizon_number], ".png", sep = "")
+    png(pic_name, width = 800, height = 800)
+    layout(matrix(c(1,1,2,3,4,5,6,7), 4, 2, byrow = TRUE),
+           widths=c(1,1), heights=c(1, multiplier, multiplier, multiplier))
+    plot(1:100/100, samples[,final_col],
+         ylab=paste('(Control)'),
+         xlab = paste(colnames(pollution_data)[col_cond_on], ' quantiles'),
+         type='l', lwd=3,
+         main = paste('Response Vine Quantiles as function', colnames(pollution_data)[col_cond_on], 'quantiles'),
+         cex.lab=1.5, cex.axis=1.7, cex.main = 1.5)
+    for(i in c(1:ncol(pollution_data))){
+      plot(1:100/100, samples[,i],
+           ylab=paste('Quantiles ', colnames(pollution_data)[i], ' at t+', vine_horizons_set[horizon_number], sep = ''),
+           xlab=paste(colnames(pollution_data)[col_cond_on], ' quantiles at time t'), 
+           type='l', lwd=3,
+           main=paste('(Horizon ', vine_horizons_set[horizon_number], ') ',
+                      colnames(pollution_data)[i], ' with corr ',  round(cor_mat[col_cond_on, i], 2), sep=''),
+           cex.lab=1.5, cex.axis=1.7, cex.main=1.7)
+      abline(h = evc[[col_cond_on]][[horizon_number]]$quantiles[i], lty=2, lwd=2)
+      abline(v = evc[[col_cond_on]][[horizon_number]]$quantiles[col_cond_on], lty=3, lwd=2)
+    }
+    dev.off()
+  }
+}
