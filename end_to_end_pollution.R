@@ -5,6 +5,27 @@ library(ggraph)
 #############################
 # CONFIGURATION
 
+# INFERENCE CFG
+
+inference_config <- list()
+inference_config[['depth']] <- 5 
+inference_config[['method']] <- 'GMM' # or 'PL'
+inference_config[['trials']] <- 1
+inference_config[['method']] <- 'GMM' # or 'PL'
+inference_config[['n_trials']] <- 60
+inference_config[['seed']] <- 42
+inference_config[['acf_depth']] <- 20
+inference_config[['bounds']] <- 'ow'
+inference_config[['subfolder']] <- paste(getwd(), '/analysis/pollution/end_to_end_pollution/inference/', inference_config[['method']], '/', sep='')
+
+subsampling_config <- inference_config
+subsampling_config[['n_trials']] <- 50
+subsampling_config[['sub_length']] <- 5000
+subsampling_config[['n_trials']] <- 50
+subsampling_config[['trials']] <- 100
+subsampling_config[['parallel']] <- TRUE
+subsampling_config[['trials']] <- 100
+
 # VINE CFG
 vine_config <- list()
 vine_config[['family_set']] =  c("clayton", "gumbel", "indep")
@@ -21,6 +42,10 @@ n_ctron <- 10
 predict_train_index <- 1:10
 predict_test_index <- 1:10
 
+PERFORM_INFERENCE <- TRUE
+PERFORM_SUBSAMPLING <- TRUE
+
+LOAD_E2E_INFERENCE <- FALSE # only used if PERFORM_INFERENCE == FALSE
 
 #############################
 #############################
@@ -47,10 +72,85 @@ origin_pollution_data <- origin_pollution_data[,-1]
 test_origin_pollution_data <- origin_pollution_data[(max_depth+1):nrow(origin_pollution_data),]
 origin_pollution_data <- origin_pollution_data[1:max_depth,]
 
-pollution_gmm <- read.csv('analysis/pollution/results/results_100k_gmm.csv')
-pollution_gmm <- pollution_gmm[(0:(nrow(pollution_gmm)/4+1)) * 3 + 1,]
-row.names(pollution_gmm) <- pollution_gmm[,1]
-pollution_gmm <- pollution_gmm[,-1]
+if(PERFORM_INFERENCE){
+  # add inference here
+  marginal_fit <- lapply(1:ncol(pollution_data), 
+                         function(i){
+                           SubSampleFit(
+                             data=pollution_data[1:max_depth,i],
+                             depth = inference_config[['depth']],
+                             sub_length = max_depth-1,
+                             method = inference_config[['method']],
+                             trials = 1,
+                             parallel = F,
+                             file_csv = paste(colnames(pollution_data)[i], '_100k_GMM_E2E.csv', sep=''),
+                             subfolder = inference_config[['subfolder']],
+                             n_trials=inference_config[['n_trials']],
+                             seed=inference_config[['seed']],
+                             acf_depth=inference_config[['acf_depth']],
+                             bounds=inference_config[['bounds']]
+                           )
+                         }
+  ) # NOTE if error with parallel, reload pairwise.R
+  
+  results_numeric <- marginal_fit[[1]][1,]
+  for(res in marginal_fit){
+    results_numeric <- rbind(results_numeric, res[2,])
+  }
+  colnames(results_numeric) <- c('xi', 'sigma', 'kappa', 'rho')
+  results <- list(params = t(as.matrix(marginal_fit[[1]][1,])), numerics = results_numeric[-1,])
+  colnames(results$params) <- c('N', 'delta', 'sub_length', 'trials')
+  rownames(results$numerics) <- colnames(pollution_data)
+  print(results)
+  results$inference_config <- inference_config
+  rlist::list.save(results,
+                   paste(getwd(), '/analysis/pollution/end_to_end_pollution/inference/', inference_config[['method']], 
+                         '/gmm_inference.RData', sep=''))
+}else{
+  if(LOAD_E2E_INFERENCE){
+    pollution_gmm <- rlist::list.load(
+      paste(getwd(), '/analysis/pollution/end_to_end_pollution/inference/', inference_config[['method']], 
+            '/gmm_inference.RData', sep=''))
+    pollution_gmm <- pollution_gmm$numerics
+  }else{
+    pollution_gmm <- read.csv('analysis/pollution/results/results_100k_gmm.csv')
+    pollution_gmm <- pollution_gmm[(0:(nrow(pollution_gmm)/4+1)) * 3 + 1,]
+    row.names(pollution_gmm) <- pollution_gmm[,1]
+    pollution_gmm <- pollution_gmm[,-1]
+  }
+}
+
+if(PERFORM_SUBSAMPLING){
+  marginal_fit <- lapply(1:ncol(pollution_data), 
+                         function(i){
+                           SubSampleFit(
+                             data =pollution_data[1:max_depth,i],
+                             depth = subsampling_config[['depth']],
+                             sub_length = subsampling_config[['sub_length']],
+                             method = subsampling_config[['method']],
+                             trials = subsampling_config[['trials']],
+                             file_csv = paste(colnames(pollution_data)[i], '_sub_sample.csv', sep=''),
+                             subfolder = subsampling_config[['subfolder']],
+                             parallel = subsampling_config[['parallel']],
+                             n_trials = subsampling_config[['n_trials']],
+                             seed = subsampling_config[['seed']]
+                           )
+                         }
+  )
+  
+  results_numeric <- marginal_fit[[1]][1,]
+  for(res in marginal_fit){
+    results_numeric <- rbind(results_numeric, res[2,])
+  }
+  colnames(results_numeric) <- c('xi', 'sigma', 'kappa', 'rho')
+  results <- list(params = t(as.matrix(marginal_fit[[1]][1,])), numerics = results_numeric[-1,])
+  colnames(results$params) <- c('N', 'delta', 'sub_length', 'trials')
+  rownames(results$numerics) <- colnames(pollution_data)
+  results$inference_config <- inference_config
+  rlist::list.save(results,
+                   paste(getwd(), '/analysis/pollution/end_to_end_pollution/inference/', inference_config[['method']], 
+                         '/gmm_inference.RData', sep=''))
+}
 
 unif_pollution_data <- UniformFromGPDForMatrix(
   dataset_origin = origin_pollution_data,
@@ -77,16 +177,16 @@ subdataset_collection[['pollution_gmm']] <- pollution_gmm
 subdataset_collection[['unif_pollution_data']] <- unif_pollution_data
 subdataset_collection[['test_unif_pollution_data']] <- test_unif_pollution_data
 
-rlist::list.save(subdataset_collection,
-     paste('data/end_to_end_pollution/subdatasets/', Sys.Date(), '_subdataset_collection.RData', sep = ''))
+rlist::list.save(x = subdataset_collection,
+     file = paste(getwd(), '/analysis/pollution/end_to_end_pollution/subdatasets/', Sys.Date(), '_subdataset_collection.RData', sep = ''))
 
 #############################
 #############################
 
 evc <- ExtremeVineCollection(dataset = pollution_data, uniform_dataset = unif_pollution_data,
                              horizons = vine_horizons_set, vine_config = vine_config, rescaling = T)
-rlist::list.save(evc,
-                 paste('analysis/pollution/end_to_end_pollution/vine_checkpoints/', Sys.Date(), '_vines.RData', sep = ''))
+rlist::list.save(x = evc,
+                 file = paste(getwd(), '/analysis/pollution/end_to_end_pollution/vine_checkpoints/', Sys.Date(), '_vines.RData', sep = ''))
 
 #############################
 #############################
@@ -131,7 +231,7 @@ for(horizon_number in 1:length(vine_horizons_set)){
 }
 
 rlist::list.save(tron_compute,
-                 paste('analysis/pollution/end_to_end_pollution/tron/', Sys.Date(), '_TRON.RData', sep = ''))
+                 paste(getwd(), '/analysis/pollution/end_to_end_pollution/tron/', Sys.Date(), '_TRON.RData', sep = ''))
 
 #############################
 #############################
@@ -221,8 +321,8 @@ for(horizon_number in 1:length(vine_horizons_set)){
   conditional_tron_compute[[horizon_number]] <- ctron_for_one_horizon  
 }
 
-rlist::list.save(conditional_tron_compute,
-                 paste('analysis/pollution/end_to_end_pollution/pollution/end_to_end_pollution/conditional_tron/', Sys.Date(), '_TRON.RData', sep = ''))
+rlist::list.save(x = conditional_tron_compute,
+                 file = paste(getwd(), '/analysis/pollution/end_to_end_pollution/conditional_tron/', Sys.Date(), '_CTRON.RData', sep = ''))
 
 for(i in 1:ncol(pred_1$pred)){
   cat('Prediction var', colnames(pollution_data)[i], '\n')
@@ -265,11 +365,40 @@ for(horizon_number in 1:length(vine_horizons_set)){
                         rep(0, ncol(pollution_data)+1)))
     
     cor_mat <- cor(unif_pollution_data)
-    
     multiplier <- 1.4
-    pic_name <- paste("analysis/pollution/end_to_end_pollution/images/response_quantiles/",  vine_horizons_set[horizon_number], "/response_",
-                      colnames(pollution_data)[col_cond_on], "_horizon", vine_horizons_set[horizon_number], ".png", sep = "")
+    
+    # PNG
+    dir_eps <- paste("analysis/pollution/end_to_end_pollution/images/response_quantiles/", vine_horizons_set[horizon_number], "/png/", sep="")
+    dir.create(dir_eps, recursive = T, showWarnings = F)
+    pic_name <- paste(dir_eps, "/response_", colnames(pollution_data)[col_cond_on], "_horizon_", vine_horizons_set[horizon_number], ".png", sep = "")
     png(pic_name, width = 800, height = 800)
+    layout(matrix(c(1,1,2,3,4,5,6,7), 4, 2, byrow = TRUE),
+           widths=c(1,1), heights=c(1, multiplier, multiplier, multiplier))
+    plot(1:100/100, samples[,final_col],
+         ylab=paste('(Control)'),
+         xlab = paste(colnames(pollution_data)[col_cond_on], ' quantiles'),
+         type='l', lwd=3,
+         main = paste('Response Vine Quantiles as function', colnames(pollution_data)[col_cond_on], 'quantiles'),
+         cex.lab=1.5, cex.axis=1.7, cex.main = 1.5)
+    for(i in c(1:ncol(pollution_data))){
+      plot(1:100/100, samples[,i],
+           ylab=paste('Quantiles ', colnames(pollution_data)[i], ' at t+', vine_horizons_set[horizon_number], sep = ''),
+           xlab=paste(colnames(pollution_data)[col_cond_on], ' quantiles at time t'), 
+           type='l', lwd=3,
+           main=paste('(Horizon ', vine_horizons_set[horizon_number], ') ',
+                      colnames(pollution_data)[i], ' with corr ',  round(cor_mat[col_cond_on, i], 2), sep=''),
+           cex.lab=1.5, cex.axis=1.7, cex.main=1.7)
+      abline(h = evc[[col_cond_on]][[horizon_number]]$quantiles[i], lty=2, lwd=2)
+      abline(v = evc[[col_cond_on]][[horizon_number]]$quantiles[col_cond_on], lty=3, lwd=2)
+    }
+    dev.off()
+    
+    # EPS
+    dir_eps <- paste("analysis/pollution/end_to_end_pollution/images/response_quantiles/", vine_horizons_set[horizon_number], "/eps/", sep="")
+    dir.create(dir_eps, recursive = T, showWarnings = F)
+    pic_name <- paste(dir_eps, "/response_", colnames(pollution_data)[col_cond_on], "_horizon_", vine_horizons_set[horizon_number], ".pdf", sep = "")
+    setEPS()
+    postscript(pic_name, width = 800, height = 800)
     layout(matrix(c(1,1,2,3,4,5,6,7), 4, 2, byrow = TRUE),
            widths=c(1,1), heights=c(1, multiplier, multiplier, multiplier))
     plot(1:100/100, samples[,final_col],
@@ -292,3 +421,4 @@ for(horizon_number in 1:length(vine_horizons_set)){
     dev.off()
   }
 }
+
