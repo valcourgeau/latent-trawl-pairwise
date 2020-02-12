@@ -187,6 +187,17 @@ ExtremeVineTestData <- function(dataset, test_dataset, uniform_dataset, test_uni
     uniform_dataset[index_pick[,ncol(dataset)+1],col_number]
   )
   
+  pred_data <- vapply(
+    1:ncol(dataset),
+    function(i){dataset[index_pick[,i],i] > 0},
+    index_pick[,1])
+  
+  # adding origin (at time t) data
+  pred_data <- cbind(
+    pred_data,
+    dataset[index_pick[,ncol(dataset)+1],col_number] > 0
+  )
+  
   # same for test
   xvine_test_data <- vapply(
     1:ncol(dataset),
@@ -196,6 +207,16 @@ ExtremeVineTestData <- function(dataset, test_dataset, uniform_dataset, test_uni
   xvine_test_data <- cbind(
     xvine_test_data,
     test_uniform_dataset[index_pick_test[,ncol(dataset)+1],col_number]
+  )
+  
+  pred_test_data <- vapply(
+    1:ncol(dataset),
+    function(i){test_dataset[index_pick_test[,i],i]>0},
+    index_pick_test[,1])
+  
+  pred_test_data <- cbind(
+    pred_test_data,
+    test_dataset[index_pick_test[,ncol(dataset)+1],col_number]>0
   )
   
   ecdf_rescaling <- apply(xvine_data, MARGIN = 2,
@@ -216,7 +237,8 @@ ExtremeVineTestData <- function(dataset, test_dataset, uniform_dataset, test_uni
   quantile_values <- vapply(1:ncol(uniform_dataset),
                             function(i){quantile(xvine_data[,i], quantiles_zero[i])}, 1.0)
   return(list(xvine_data=xvine_data, quantiles=quantiles_zero, quantile_values=quantile_values,
-              xvine_test_data=xvine_test_data, ecdf_rescaling=ecdf_rescaling))
+              xvine_test_data=xvine_test_data, ecdf_rescaling=ecdf_rescaling,
+              pred_data=pred_data, pred_test_data=pred_test_data))
 }
 
 

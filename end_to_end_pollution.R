@@ -11,7 +11,6 @@ inference_config <- list()
 inference_config[['depth']] <- 5 
 inference_config[['method']] <- 'GMM' # or 'PL'
 inference_config[['trials']] <- 1
-inference_config[['method']] <- 'GMM' # or 'PL'
 inference_config[['n_trials']] <- 60
 inference_config[['seed']] <- 42
 inference_config[['acf_depth']] <- 20
@@ -21,10 +20,8 @@ inference_config[['subfolder']] <- paste(getwd(), '/analysis/pollution/end_to_en
 subsampling_config <- inference_config
 subsampling_config[['n_trials']] <- 50
 subsampling_config[['sub_length']] <- 5000
-subsampling_config[['n_trials']] <- 50
-subsampling_config[['trials']] <- 100
+subsampling_config[['trials']] <- 10
 subsampling_config[['parallel']] <- TRUE
-subsampling_config[['trials']] <- 100
 
 # VINE CFG
 vine_config <- list()
@@ -39,11 +36,11 @@ vine_horizons_set <- c(1, 2) # c(1, 2, 3, 4, 6, 12, 24, 48)
 n_tron <- 100
 
 n_ctron <- 10
-predict_train_index <- 1:10
-predict_test_index <- 1:10
+predict_train_index <- 1:100
+predict_test_index <- 1:100
 
 PERFORM_INFERENCE <- TRUE
-PERFORM_SUBSAMPLING <- TRUE
+PERFORM_SUBSAMPLING <- F
 
 LOAD_E2E_INFERENCE <- FALSE # only used if PERFORM_INFERENCE == FALSE
 
@@ -106,6 +103,7 @@ if(PERFORM_INFERENCE){
   rlist::list.save(results,
                    paste(getwd(), '/analysis/pollution/end_to_end_pollution/inference/', inference_config[['method']], 
                          '/gmm_inference.RData', sep=''))
+  pollution_gmm <- results$numerics
 }else{
   if(LOAD_E2E_INFERENCE){
     pollution_gmm <- rlist::list.load(
@@ -124,33 +122,39 @@ if(PERFORM_SUBSAMPLING){
   marginal_fit <- lapply(1:ncol(pollution_data), 
                          function(i){
                            SubSampleFit(
-                             data =pollution_data[1:max_depth,i],
+                             data = pollution_data[1:max_depth,i],
                              depth = subsampling_config[['depth']],
-                             sub_length = subsampling_config[['sub_length']],
-                             method = subsampling_config[['method']],
+                             sub_length = 5000,#subsampling_config[['sub_length']],
+                             method = 'GMM', #subsampling_config[['method']],
                              trials = subsampling_config[['trials']],
                              file_csv = paste(colnames(pollution_data)[i], '_sub_sample.csv', sep=''),
                              subfolder = subsampling_config[['subfolder']],
-                             parallel = subsampling_config[['parallel']],
-                             n_trials = subsampling_config[['n_trials']],
-                             seed = subsampling_config[['seed']]
+                             parallel = T,
+                             seed = subsampling_config[['seed']],
+                             n_trials = 5,
                            )
                          }
   )
   
-  results_numeric <- marginal_fit[[1]][1,]
-  for(res in marginal_fit){
-    results_numeric <- rbind(results_numeric, res[2,])
+  names(marginal_fit) <- colnames(pollution_data)
+  for(key in names(marginal_fit)){
+    params <- marginal_fit[[key]][1,]
+    names(params) <- c('N', 'delta', 'sub_length', 'trials')
+    numerics <- marginal_fit[[key]][-1,]
+    colnames(numerics) <- c('xi', 'sigma', 'kappa', 'rho')
+    marginal_fit[[key]] <- list(
+      details=params,
+      numerics=numerics
+    )
   }
-  colnames(results_numeric) <- c('xi', 'sigma', 'kappa', 'rho')
-  results <- list(params = t(as.matrix(marginal_fit[[1]][1,])), numerics = results_numeric[-1,])
-  colnames(results$params) <- c('N', 'delta', 'sub_length', 'trials')
-  rownames(results$numerics) <- colnames(pollution_data)
-  results$inference_config <- inference_config
-  rlist::list.save(results,
-                   paste(getwd(), '/analysis/pollution/end_to_end_pollution/inference/', inference_config[['method']], 
-                         '/gmm_inference.RData', sep=''))
+  marginal_fit$subsampling_config <- subsampling_config
+  sub_results <- marginal_fit
+  
+  rlist::list.save(sub_results,
+                   paste(getwd(), '/analysis/pollution/end_to_end_pollution/inference/', subsampling_config[['method']], 
+                         '/sub_sampling.RData', sep=''))
 }
+
 
 unif_pollution_data <- UniformFromGPDForMatrix(
   dataset_origin = origin_pollution_data,
@@ -238,10 +242,6 @@ rlist::list.save(tron_compute,
 
 # C-TRON
 
-# Prediction results
-train_prediction_output <- ExtremeVinePredictData(pollution_data, col_cond_on, 1)
-test_prediction_output <- ExtremeVinePredictData(test_pollution_data, col_cond_on, 1)
-
 conditional_tron_compute <- list()
 for(horizon_number in 1:length(vine_horizons_set)){
   ctron_for_one_horizon <- list()
@@ -249,17 +249,9 @@ for(horizon_number in 1:length(vine_horizons_set)){
     print(col_cond_on)
     ev_ctrons <- list()
     final_col <- ncol(pollution_data) + 1
-    vine_tmp <- evc[[col_cond_on]][[1]]$vine_fit
-    vine_struc <- evc[[col_cond_on]][[1]]$vine_fit$structure
-    vine_quantiles <- evc[[col_cond_on]][[1]]$quantiles
-    
-    # true values
-    train_prediction_output <- ExtremeVinePredictData(test_pollution_data, col_cond_on, 1)
-    test_prediction_output <- ExtremeVinePredictData(test_pollution_data, col_cond_on, 1)
-    true_prediction_output <- list(
-      'train'=train_prediction_output[predict_train_index,],
-      'test'=test_prediction_output[predict_train_index,]
-    )
+    vine_tmp <- evc[[col_cond_on]][[horizon_number]]$vine_fit
+    vine_struc <- evc[[col_cond_on]][[horizon_number]]$vine_fit$structure
+    vine_quantiles <- evc[[col_cond_on]][[horizon_number]]$quantiles
     
     # input data
     input_data <- ExtremeVineTestData(
@@ -277,10 +269,17 @@ for(horizon_number in 1:length(vine_horizons_set)){
       'test'=input_data$xvine_test_data[predict_test_index, final_col]
     )
     
+    true_train_test_output <- list(
+      'train'=input_data$pred_data[predict_train_index,],
+      'test'=input_data$pred_test_data[predict_test_index,]
+    )
+    
     two_phases_predict <- list()
     for(tag in c('train', 'test')){
       print(tag)
       prediction_results <- list()
+      
+      # AVG PREDICTION
       pred_1 <- ExtremeVineConditionalPredict(
         vine = vine_tmp,
         quantile_values = vine_quantiles,
@@ -290,30 +289,41 @@ for(horizon_number in 1:length(vine_horizons_set)){
       )
       prediction_results[['avg_pred']] <- pred_1
       
+      # INDICATOR PREDICTION
       pred_2 <- ExtremeVineConditionalIndicatorPredict(
         vine = vine_tmp,
         quantile_values = vine_quantiles,
         col_number = final_col,
-        values = input_data$xvine_data[1:100],
+        values = xvine_train_test_data[[tag]],
         n = n_ctron
       )
       prediction_results[['indicator_pred']] <- pred_2
       
-      # TODO
-      warning('need to implement prediction metrics')
-      # print(as.factor(as.numeric(pred_1$pred[,i])))
-      # print(as.factor(as.numeric(true_prediction_output[[tag]][,i])))
-      # for(i in 1:ncol(input_data$xvine_data)){
-      #   cm <- caret::confusionMatrix(
-      #     data=as.factor(as.numeric(pred_1$pred[,i])),
-      #     reference=as.factor(as.numeric(true_prediction_output[[tag]][,i]))
-      #   )
-      # }
+      # RESULTS
+      actual_values <- true_train_test_output[[tag]][,col_cond_on]
+      avg_values <- prediction_results[['avg_pred']]$pred[,col_cond_on]
+      indicator_values <- prediction_results[['indicator_pred']]$pred[,col_cond_on]
+      
+      prediction_results[['avg_pred']]$metrics <- list()
+      
+      prediction_results[['avg_pred']]$metrics$precision <- Metrics::precision(actual = actual_values, predicted = avg_values)
+      prediction_results[['avg_pred']]$metrics$recall <- Metrics::recall(actual = actual_values, predicted = avg_values)
+      prediction_results[['avg_pred']]$metrics$accuracy <- Metrics::accuracy(actual = actual_values, predicted = avg_values)
+      prediction_results[['avg_pred']]$metrics$f1 <- Metrics::f1(actual = actual_values, predicted = avg_values)
+      
+      prediction_results[['indicator_pred']]$metrics$precision <- Metrics::precision(actual = actual_values, predicted = indicator_values)
+      prediction_results[['indicator_pred']]$metrics$recall <- Metrics::recall(actual = actual_values, predicted = indicator_values)
+      prediction_results[['indicator_pred']]$metrics$accuracy <- Metrics::accuracy(actual = actual_values, predicted = indicator_values)
+      prediction_results[['indicator_pred']]$metrics$f1 <- Metrics::f1(actual = actual_values, predicted = indicator_values)
+      
+      # TODO 
+      warning('add benchmarks')
       
       two_phases_predict[[tag]] <- prediction_results
     }
     
     ev_ctrons[['predictions']] <- two_phases_predict
+    ev_ctrons[['n_sims_ctron']] <- n_ctron
     ev_ctrons[['horizon']] <- vine_horizons_set[horizon_number]
     
     ctron_for_one_horizon[[colnames(pollution_data)[col_cond_on]]] <- ev_ctrons
@@ -324,22 +334,6 @@ for(horizon_number in 1:length(vine_horizons_set)){
 rlist::list.save(x = conditional_tron_compute,
                  file = paste(getwd(), '/analysis/pollution/end_to_end_pollution/conditional_tron/', Sys.Date(), '_CTRON.RData', sep = ''))
 
-for(i in 1:ncol(pred_1$pred)){
-  cat('Prediction var', colnames(pollution_data)[i], '\n')
-  cm <- caret::confusionMatrix(
-    data=as.factor(as.numeric(pred_1$pred[,i])),
-    reference=as.factor(as.numeric(test_prediction_output[1:100,i]))
-  )
-  print(cm$table)
-  cm2 <- caret::confusionMatrix(
-    data=as.factor(as.numeric(pred_2$pred[,i])),
-    reference=as.factor(as.numeric(test_prediction_output[1:100,i]))
-  )
-  print(cm2$table)
-  # print(cm)
-  
-  cat('------------------------------\n')
-}
 #############################
 #############################
 

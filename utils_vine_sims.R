@@ -157,7 +157,7 @@ ExtremeVineConditionalPredict <- function(vine, quantile_values, col_number, val
     sd_pred_sample =  t(apply(predict_vals, c(2,3), sd))/sqrt(n),
     quantile_values = quantile_values
   )
-  results[['pred']] <- t(apply(results[['mean_pred']][,-col_number], 1, function(x){x>quantile_values}))
+  results[['pred']] <- t(apply(results[['mean_pred']][,-col_number], 1, function(x){as.numeric(x>quantile_values)}))
   
   return(results)
 }
@@ -181,7 +181,7 @@ ExtremeVineConditionalIndicatorPredict <- function(vine, quantile_values, col_nu
     sd_pred_sample =  t(apply(tmp_vals, c(2,3), sd))/sqrt(n),
     quantile_values = quantile_values
   )
-  results[['pred']] <- t(apply(results[['mean_pred']][,-col_number], 1, function(x){x>quantile_values}))
+  results[['pred']] <- t(apply(results[['mean_pred']][,-col_number], 1, function(x){as.numeric(x>quantile_values)}))
   return(results)
 }
 
